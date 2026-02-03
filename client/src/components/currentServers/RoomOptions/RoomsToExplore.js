@@ -1,6 +1,6 @@
 import {  useState, useEffect } from "react";
 import styles from "./RoomsCreated.module.css";
-import axios from "axios";
+import axios from "../../../api/axios";
 import KeyboardDoubleArrowRightTwoToneIcon from "@mui/icons-material/KeyboardDoubleArrowRightTwoTone";
 import KeyboardDoubleArrowLeftTwoToneIcon from "@mui/icons-material/KeyboardDoubleArrowLeftTwoTone";
 import GridViewRoundedIcon from "@mui/icons-material/GridViewRounded";
@@ -25,13 +25,18 @@ const RoomsToExplore = ({ roomsCreated, handleClick }) => {
       });
       if (response.data) {
         // Assuming the data is an array of rooms
-        const roomData = response.data;
+        const roomData = Array.isArray(response.data) ? response.data : [];
         setAllRooms(roomData);
         setListOfRooms(roomData);
+      } else {
+        setAllRooms([]);
+        setListOfRooms([]);
       }
     } catch (error) {
       // Handle any errors that occur during the request
       console.error(error);
+      setAllRooms([]);
+      setListOfRooms([]);
     }
   };
   const endIndex = Math.min(currentIndex + roomsPerPage, allRooms.length);
@@ -72,10 +77,10 @@ const RoomsToExplore = ({ roomsCreated, handleClick }) => {
     setAllRooms(listOfRooms);
     setDisplayPrivateRooms(false);
   };
-  const displayedRooms = allRooms.slice(
+  const displayedRooms = Array.isArray(allRooms) ? allRooms.slice(
     currentIndex,
     currentIndex + roomsPerPage
-  );
+  ) : [];
   return (
     <>
       <div className={styles.rooms_wrapper}>

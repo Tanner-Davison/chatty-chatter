@@ -77,6 +77,11 @@ app.post("/updateUserProfile", EndpointHandler.updateProfileVariables);
 app.post("/addFriend", EndpointHandler.addFriend);
 app.post("/checkIfFriends", EndpointHandler.checkIfAlreadyFriend);
 
+// Basic health check route
+app.get("/", (req, res) => {
+  res.json({ message: "Chatty Chatter API is running!", timestamp: new Date().toISOString() });
+});
+
 
 const io = new Server(server, {
   cors: {
