@@ -1,7 +1,11 @@
 {
-  "name": "chatty-chatter-monorepo",
+  "name": "chatty-chatter-server",
   "scripts": {
-    "build": "cd client && npm install && npm run build",
-    "start": "cd server && npm start"
+    "start": "cd server && npm start",
+    "dev": "cd server && npm run dev"
+  },
+  "engines": {
+    "node": "18.x",
+    "npm": "9.x"
   }
 }
