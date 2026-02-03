@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import AddBoxOutlinedIcon from "@mui/icons-material/AddBoxOutlined";
 import IndeterminateCheckBoxOutlinedIcon from "@mui/icons-material/IndeterminateCheckBoxOutlined";
 import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
-import axios from "axios";
+import axios from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import "../App.css";
