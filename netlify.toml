@@ -1,10 +1,11 @@
 [build]
   publish = "client/build"
-  command = "cd client && npm install && npm run build"
+  command = "cd client && npm ci --cache /opt/build/.npm --prefer-offline --no-audit && npx react-scripts build"
 
 [build.environment]
   # Use the newer Ubuntu Jammy build image (22.04)
   BUILD_IMAGE = "jammy"
+  NODE_VERSION = "18"
 
 # Force HTTPS redirects
 [[redirects]]
