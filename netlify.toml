@@ -1,6 +1,6 @@
 [build]
   publish = "client/build"
-  command = "cd client && npm ci --cache /opt/build/.npm --prefer-offline --no-audit && npx react-scripts build"
+  command = "cd client && npm ci && npm run build"
 
 [build.environment]
   # Use the newer Ubuntu Jammy build image (22.04)
