@@ -3,7 +3,7 @@ import "./Login.css";
 import { LoginContext } from "../contexts/LoginContext";
 import { useNavigate } from "react-router-dom";
 import Header from "../Header/Header";
-import axios from "axios";
+import axios from "../../api/axios";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 

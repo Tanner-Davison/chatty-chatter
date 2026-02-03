@@ -24,11 +24,27 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
   "http://localhost:5000",
-  "5000",
-  "https://protected-retreat-97985-3868e60ef0db.herokuapp.com",
-];
+  "https://www.chattychatter.com",
+  "https://chattychatter.com",
+  "http://www.chattychatter.com",
+  "http://chattychatter.com",
+  "https://dancing-quokka-6b5001.netlify.app",
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
-app.use(cors())
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy does not allow access from the specified origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true
+}))
 app.use(express.json());
 app.use((req, res, next) => {
   next();
@@ -76,8 +92,17 @@ app.get('*', (req, res) => {
 });
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://www.chattychatter.com",
+      "https://chattychatter.com",
+      "http://www.chattychatter.com",
+      "http://chattychatter.com",
+      "https://dancing-quokka-6b5001.netlify.app"
+    ],
     methods: ["GET", "POST", "DELETE"],
+    credentials: true
   },
   reconnection: true,
   reconnectionAttempts: 200,

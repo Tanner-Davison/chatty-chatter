@@ -14,10 +14,11 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     // Initialize the socket only once
-    const newSocket = io.connect(`/`, {
+    const newSocket = io.connect(process.env.REACT_APP_WS_URL || 'https://api.chattychatter.com', {
       reconnection: true,
       reconnectionAttempts: 20,
       reconnectionDelay: 2000,
+      withCredentials: true,
     });
     setSocket(newSocket);
 
