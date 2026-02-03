@@ -7,7 +7,7 @@ require("dotenv").config();
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_SECRET = process.env.CLOUDINARY_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL;
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const saltRounds = 5;
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,

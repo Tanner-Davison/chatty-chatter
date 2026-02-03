@@ -1,5 +1,5 @@
 const {Rooms,User} = require("./Schemas");
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const currentDate = new Date().toLocaleDateString(); 
 module.exports = {
   roomHistory: async (req, res) => {
