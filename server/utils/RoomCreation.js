@@ -1,6 +1,6 @@
 const { User, Rooms } = require("./Schemas");
 const currentDate = new Date().toLocaleDateString(); 
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const saltRounds = 5;
 
 module.exports = {
