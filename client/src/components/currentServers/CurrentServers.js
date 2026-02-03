@@ -47,11 +47,12 @@ const CurrentServers = () => {
   }
   const handleRoomButtonClick = (roomNumber) => {
     setMainAccess(true);
-    setSocket(io.connect(`/`), {
+    setSocket(io.connect(process.env.REACT_APP_WS_URL || 'https://protected-retreat-97985-3868e60ef0db.herokuapp.com', {
       reconnection: true,
       reconnectionAttempts: 20,
       reconnectionDelay: 2000,
-    });
+      withCredentials: true,
+    }));
     sessionStorage.setItem("lastRoom", roomNumber.toString());
     return navigate(`/chatroom/${roomNumber}`);
   };

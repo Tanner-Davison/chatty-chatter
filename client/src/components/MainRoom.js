@@ -234,10 +234,11 @@ const checkList = async () => {
 
     if (!socket) {
       setSocket(
-        io.connect(`/`, {
+        io.connect(process.env.REACT_APP_WS_URL || 'https://protected-retreat-97985-3868e60ef0db.herokuapp.com', {
           reconnection: true,
           reconnectionAttempts: 20,
           reconnectionDelay: 2000,
+          withCredentials: true,
         })
       );
       return setMainAccess(true);
