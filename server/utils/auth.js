@@ -1,5 +1,5 @@
 const { User } = require("./Schemas"); // your User model
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
 const authenticateUser = async (username, password) => {
   console.log("this is running")
