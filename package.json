@@ -1,8 +1,8 @@
 {
   "name": "chatty-chatter-server",
   "scripts": {
-    "start": "cd server && npm start",
-    "dev": "cd server && npm run dev"
+    "start": "cd server && npm install && npm start",
+    "dev": "cd server && npm install && npm run dev"
   },
   "engines": {
     "node": "18.x",
