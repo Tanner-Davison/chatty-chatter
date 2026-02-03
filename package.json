@@ -1,39 +1,7 @@
 {
-  "name": "chatty_chatter",
-  "version": "1.0.0",
-  "description": "<h1>ChattyChatter.com </h1>\r Welcome to the official GitHub repository for the ChatterMatters website! Dive into some live, interactive debates on gender topics, share your insights, and see what others have to say.",
-  "main": "index.js",
+  "name": "chatty-chatter-monorepo",
   "scripts": {
-    "start": "node server/index.js",
-    "server": "nodemon server/index.js",
-    "client": "npm start --prefix client",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "heroku-postbuild": "cd client && npm install --legacy-peer-deps && chmod +x ./node_modules/.bin/react-scripts && NODE_ENV=development npm run build"
-  },
-  "engines": {
-    "node": "20.x",
-    "npm": "10.x"
-  },
-  "cacheDirectories": [
-    "client/node_modules"
-  ],
-  "dependencies": {
-    "axios": "^1.7.7",
-    "bcrypt": "^5.1.1",
-    "cloudinary": "^1.41.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "mongoose": "^8.7.2",
-    "multer": "^1.4.5-lts.1",
-    "multer-storage-cloudinary": "^4.0.0",
-    "socket.io": "^4.8.0"
-  },
-  "devDependencies": {
-    "concurrently": "^9.0.1",
-    "nodemon": "^3.1.7"
-  },
-  "keywords": [],
-  "author": "Tanner Davison",
-  "license": "ISC"
+    "build": "cd client && npm install && npm run build",
+    "start": "cd server && npm start"
+  }
 }
