@@ -5,7 +5,7 @@ import { LoginContext } from "../contexts/LoginContext";
 import { LoadProfileRoom } from "./LoadProfileRoom";
 import AboutMe from "./profilesections/AboutMe";
 import styles from "./Profile.module.css";
-import axios from "axios";
+import axios from "../../api/axios";
 import DotsComp from "./profilesections/dotsComp";
 import ModeEditOutlinedIcon from "@mui/icons-material/ModeEditOutlined";
 import DriveFileRenameOutlineOutlinedIcon from "@mui/icons-material/DriveFileRenameOutlineOutlined";

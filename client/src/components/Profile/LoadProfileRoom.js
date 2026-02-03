@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios from "../../api/axios"
 
 const LoadProfileRoom =async(username)=>{
     const profileInfo = await axios.get(`/user_info/${username}`);

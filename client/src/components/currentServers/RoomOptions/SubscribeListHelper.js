@@ -3,7 +3,7 @@ import { LoginContext } from "../../contexts/LoginContext.js";
 import GroupIcon from "@mui/icons-material/Group";
 import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import { Tilt } from "react-tilt";
-import axios from "axios";
+import axios from "../../../api/axios";
 import styles from "./RoomsCreated.module.css";
 import Button from "@mui/material/Button";
 import Menu from "@mui/material/Menu";

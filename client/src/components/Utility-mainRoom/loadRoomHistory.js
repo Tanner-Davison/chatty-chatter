@@ -1,7 +1,9 @@
+import axios from "../../api/axios";
+
 const loadRoomHistory = async (room) => {
   try {
-    const response = await fetch(`/roomHistory/${room}`);
-    const data = await response.json();
+    const response = await axios.get(`/roomHistory/${room}`);
+    const data = response.data;
 
     if (data.messageHistory) {
       return {

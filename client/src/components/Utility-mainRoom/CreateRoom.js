@@ -12,7 +12,7 @@ import locked from "./svgs/locked.svg";
 import Header from "../Header/Header";
 import build from "./svgs/build.svg";
 import "./CreateRoom.css";
-import axios from "axios";
+import axios from "../../api/axios";
 import getCurrentTime from "./getTime";
 import VisibilityTwoToneIcon from "@mui/icons-material/VisibilityTwoTone";
 import EmojiObjectsTwoToneIcon from "@mui/icons-material/EmojiObjectsTwoTone";
