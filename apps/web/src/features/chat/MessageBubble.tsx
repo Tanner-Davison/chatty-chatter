@@ -105,7 +105,7 @@ function MessageText({ text, isOwn, me }: { text: string; isOwn: boolean; me: st
         className={cn(
           "rounded-md px-1 font-semibold",
           isOwn
-            ? "bg-ink-950/15 hover:bg-ink-950/25"
+            ? "bg-ink-950/85 text-primary hover:bg-ink-950"
             : part.mention === me
               ? "bg-warning/20 text-warning"
               : "bg-primary-soft text-primary hover:bg-primary/20",
