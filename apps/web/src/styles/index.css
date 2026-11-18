@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+/*
+ * Chatty Chatter design tokens.
+ *
+ * Every colour has one job:
+ *   primary  electric cyan  your actions, your messages, focus, active nav
+ *   public   emerald        public hubs, "connected"
+ *   private  violet         private hubs, locks, passwords
+ *   danger   rose           destructive actions, errors, "disconnected"
+ *   warning  amber          attention without danger
+ *   ink      blue-black     surfaces, borders, text
+ */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, sans-serif;
+  --font-logo: "Berkshire Swash", cursive;
+
+  /* Neutrals: one blue-tinted family, darkest to lightest. */
+  --color-ink-950: #05070b;
+  --color-ink-900: #0a0e14;
+  --color-ink-850: #0f141c;
+  --color-ink-800: #141b25;
+  --color-ink-700: #1c2531;
+  --color-ink-600: #273342;
+  --color-ink-500: #384658;
+  --color-ink-400: #5b6b80;
+  --color-ink-300: #8796aa;
+  --color-ink-200: #b7c2d1;
+  --color-ink-100: #e3e9f1;
+
+  /* Semantic surfaces and text. */
+  --color-canvas: var(--color-ink-950);
+  --color-surface: var(--color-ink-900);
+  --color-surface-raised: var(--color-ink-850);
+  --color-surface-overlay: var(--color-ink-800);
+  --color-line: var(--color-ink-700);
+  --color-line-strong: var(--color-ink-600);
+  --color-fg: var(--color-ink-100);
+  --color-fg-muted: var(--color-ink-300);
+  --color-fg-subtle: var(--color-ink-400);
+
+  /* Roles. -soft is for tinted backgrounds, -fg for text on the solid colour. */
+  --color-primary: #22d3ee;
+  --color-primary-strong: #06b6d4;
+  --color-primary-soft: rgb(34 211 238 / 0.12);
+  --color-primary-fg: #031318;
+
+  --color-public: #34d399;
+  --color-public-strong: #10b981;
+  --color-public-soft: rgb(52 211 153 / 0.12);
+
+  --color-private: #a78bfa;
+  --color-private-strong: #8b5cf6;
+  --color-private-soft: rgb(167 139 250 / 0.14);
+
+  --color-danger: #fb7185;
+  --color-danger-strong: #f43f5e;
+  --color-danger-soft: rgb(251 113 133 / 0.12);
+
+  --color-warning: #fbbf24;
+
+  --radius-tile: 1rem;
+
+  --shadow-glow-primary: 0 0 0 1px rgb(34 211 238 / 0.35), 0 0 24px -4px rgb(34 211 238 / 0.45);
+  --shadow-glow-public: 0 0 0 1px rgb(52 211 153 / 0.35), 0 0 24px -4px rgb(52 211 153 / 0.4);
+  --shadow-glow-private: 0 0 0 1px rgb(167 139 250 / 0.4), 0 0 24px -4px rgb(167 139 250 / 0.45);
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 20px 40px -24px rgb(0 0 0 / 0.8);
+
+  --animate-fade-up: fade-up 0.25s ease-out both;
+  --animate-blink: blink 1.2s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-canvas);
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    color: var(--color-fg);
+    -webkit-font-smoothing: antialiased;
+    /* Faint cyan and violet glows plus a grid give the "futuristic" backdrop. */
+    background:
+      radial-gradient(60rem 40rem at 10% -10%, rgb(34 211 238 / 0.08), transparent 60%),
+      radial-gradient(50rem 40rem at 110% 10%, rgb(167 139 250 / 0.07), transparent 60%),
+      linear-gradient(rgb(255 255 255 / 0.02) 1px, transparent 1px) 0 0 / 48px 48px,
+      linear-gradient(90deg, rgb(255 255 255 / 0.02) 1px, transparent 1px) 0 0 / 48px 48px,
+      var(--color-canvas);
+    background-attachment: fixed;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgb(34 211 238 / 0.3);
+  }
+}
+
+/* The checkered hub tile from the original design, tinted by --tile-color. */
+@utility tile-checker {
+  background-color: color-mix(in oklab, var(--tile-color) 22%, var(--color-ink-900));
+  background-image:
+    linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.06) 25%,
+      transparent 25%,
+      transparent 75%,
+      rgb(255 255 255 / 0.06) 75%
+    ),
+    linear-gradient(
+      45deg,
+      rgb(255 255 255 / 0.06) 25%,
+      transparent 25%,
+      transparent 75%,
+      rgb(255 255 255 / 0.06) 75%
+    ),
+    linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--tile-color) 45%, transparent),
+      transparent 70%
+    );
+  background-size:
+    28px 28px,
+    28px 28px,
+    100% 100%;
+  background-position:
+    0 0,
+    14px 14px,
+    0 0;
+}
