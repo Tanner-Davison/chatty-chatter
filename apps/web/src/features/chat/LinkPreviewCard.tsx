@@ -4,22 +4,24 @@ import { X } from "lucide-react";
 import type { LinkPreview } from "@chatty/shared";
 import { api } from "../../lib/api";
 import { cn } from "../../lib/cn";
+import { useCurrentUser } from "../auth/currentUser";
 
-const HIDDEN_KEY = "chatty:hidden-previews";
+// Previews someone hid just for themselves, per account: two people sharing a
+// browser (or testing two accounts side by side) don't share each other's hides.
+const hiddenKey = (username: string) => `chatty:hidden-previews:${username}`;
 
-// Previews other people hid just for themselves, kept per browser.
-function readHidden(): Set<string> {
+function readHidden(username: string): Set<string> {
   try {
-    return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? "[]") as string[]);
+    return new Set(JSON.parse(localStorage.getItem(hiddenKey(username)) ?? "[]") as string[]);
   } catch {
     return new Set();
   }
 }
 
-function hideLocally(id: string) {
+function hideLocally(username: string, id: string) {
   try {
-    const ids = [...readHidden(), id].slice(-500);
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify(ids));
+    const ids = [...readHidden(username), id].slice(-500);
+    localStorage.setItem(hiddenKey(username), JSON.stringify(ids));
   } catch {
     // Storage can be unavailable (private mode); hiding still works for this visit.
   }
@@ -48,12 +50,13 @@ interface LinkPreviewCardProps {
 /** A Slack-style unfurl under a message: site, title, description and image. */
 export function LinkPreviewCard({ url, messageId, isOwn, onRemove }: LinkPreviewCardProps) {
   const { data: preview } = useLinkPreview(url);
-  const [hidden, setHidden] = useState(() => readHidden().has(`${messageId}:${url}`));
+  const { username } = useCurrentUser();
+  const [hidden, setHidden] = useState(() => readHidden(username).has(`${messageId}:${url}`));
   if (!preview || hidden) return null;
 
   const hide = () => {
     if (isOwn) return onRemove();
-    hideLocally(`${messageId}:${url}`);
+    hideLocally(username, `${messageId}:${url}`);
     setHidden(true);
   };
 
