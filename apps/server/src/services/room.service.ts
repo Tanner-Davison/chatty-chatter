@@ -1,3 +1,4 @@
+import { messagePreview } from "@chatty/shared";
 import bcrypt from "bcryptjs";
 import { Types } from "mongoose";
 import type { z } from "zod";
@@ -225,7 +226,7 @@ export async function getMyRooms(username: string): Promise<MyRooms> {
       unreadMentions: mentions.get(row.room_number) ?? 0,
       ...(row.last && {
         lastMessage: {
-          message: row.last.message || (row.last.attachments?.length ? "📷 Photo" : ""),
+          message: messagePreview(row.last.message ?? "", Boolean(row.last.attachments?.length)),
           sentBy: row.last.sentBy ?? "",
         },
       }),

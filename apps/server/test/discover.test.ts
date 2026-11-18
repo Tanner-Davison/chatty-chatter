@@ -203,3 +203,16 @@ describe("GET /api/rooms/:roomNumber/peek", () => {
     await tanner.get("/api/rooms/999/peek").expect(404);
   });
 });
+
+describe("message previews", () => {
+  it("summarizes code as 💻 Code on Explore cards", async () => {
+    await RoomModel.create({
+      room_number: 50,
+      room_name: "Code",
+      created_by: "ben",
+      messageHistory: [messageAt(1, "ben", "check this:\n```ts\nconst a = 1;\n```")],
+    });
+    const { body } = await tanner.get("/api/rooms/discover?q=Code").expect(200);
+    expect(body[0].lastMessage).toEqual({ message: "check this: 💻 Code", sentBy: "ben" });
+  });
+});

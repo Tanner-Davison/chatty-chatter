@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractMentions, splitMentions } from "./mentions";
+import { extractMentions, messagePreview, splitMentions } from "./mentions";
 
 describe("extractMentions", () => {
   it("finds lowercase, deduplicated usernames", () => {
@@ -35,5 +35,21 @@ describe("splitMentions", () => {
       { text: "@ben", mention: "ben" },
       { text: ", ok" },
     ]);
+  });
+});
+
+describe("messagePreview", () => {
+  it("summarizes code blocks and keeps surrounding text on one line", () => {
+    expect(messagePreview("```cpp\nstd::cout << 1;\n```")).toBe("💻 Code");
+    expect(messagePreview("here's the fix:\n```ts\nconst a = 1;\n```\nthoughts?")).toBe(
+      "here's the fix: 💻 Code thoughts?",
+    );
+    expect(messagePreview("```unclosed\ncode")).toBe("💻 Code");
+  });
+
+  it("leaves inline code and plain text alone, and handles photos", () => {
+    expect(messagePreview("run `npm test`\nnow")).toBe("run `npm test` now");
+    expect(messagePreview("", true)).toBe("📷 Photo");
+    expect(messagePreview("caption", true)).toBe("caption");
   });
 });

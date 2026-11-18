@@ -1,3 +1,4 @@
+import { messagePreview } from "@chatty/shared";
 import { Types, type PipelineStage } from "mongoose";
 import type { DiscoverQuery, DiscoverRoom, DiscoverSort, RoomPeek } from "@chatty/shared";
 import { notFound } from "../lib/http-error";
@@ -107,7 +108,7 @@ function toDiscoverRoom(
     ...(!isPrivate &&
       r.last && {
         lastMessage: {
-          message: r.last.message || (r.last.attachments?.length ? "📷 Photo" : ""),
+          message: messagePreview(r.last.message ?? "", Boolean(r.last.attachments?.length)),
           sentBy: r.last.sentBy ?? "",
         },
       }),

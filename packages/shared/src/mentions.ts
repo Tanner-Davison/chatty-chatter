@@ -40,3 +40,16 @@ export function splitMentions(text: string): { text: string; mention?: string }[
   if (last < text.length) parts.push({ text: text.slice(last) });
   return parts;
 }
+
+/**
+ * A one-line summary of a message for tiles, cards and notifications: code
+ * blocks become "💻 Code", newlines collapse, and photo-only messages read
+ * "📷 Photo".
+ */
+export function messagePreview(text: string, hasPhotos = false): string {
+  const summary = text
+    .replace(/```[\s\S]*?(```|$)/g, " 💻 Code ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return summary || (hasPhotos ? "📷 Photo" : "");
+}
