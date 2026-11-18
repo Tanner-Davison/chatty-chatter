@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { ArrowLeft, BellMinus, BellPlus, Crown, Lock, Plus } from "lucide-react";
+import { ArrowLeft, BellMinus, BellPlus, Crown, ImagePlus, Lock, Plus } from "lucide-react";
 import type { Room } from "@chatty/shared";
 import { Badge, Button, ConfirmDialog, LoadingBlock, Panel, StatusDot } from "../../components/ui";
 import { useCurrentUser } from "../auth/currentUser";
 import { useJoinRoom, useLeaveRoom, useMyRooms, useRoom } from "../rooms/api";
 import { ChatSettings } from "./ChatSettings";
-import { Composer } from "./Composer";
+import { Composer, type ComposerHandle } from "./Composer";
 import { messageAnchor } from "./anchors";
 import type { ChatEntry } from "./chatReducer";
 import { MentionNavigator } from "./MentionNavigator";
@@ -93,6 +93,11 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
     joinError,
   } = useChatRoom(room.room_number, room.messageHistory, user.username, reload);
   const colors = useRoomColors(room.room_number);
+  const composer = useRef<ComposerHandle>(null);
+  // Counts nested dragenter/dragleave so the overlay doesn't flicker over child elements.
+  const dragDepth = useRef(0);
+  const [dragging, setDragging] = useState(false);
+  const isFileDrag = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
   const [confirmDelete, setConfirmDelete] = useState<ChatEntry | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
@@ -151,7 +156,37 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
   }, [room.users_in_room, messages, user.username]);
 
   return (
-    <div className="flex h-[calc(100dvh-8rem)] flex-col gap-3">
+    <div
+      className="relative flex h-[calc(100dvh-8rem)] flex-col gap-3"
+      onDragEnter={(e) => {
+        if (!isFileDrag(e)) return;
+        e.preventDefault();
+        dragDepth.current += 1;
+        setDragging(true);
+      }}
+      onDragOver={(e) => {
+        if (isFileDrag(e)) e.preventDefault();
+      }}
+      onDragLeave={(e) => {
+        if (!isFileDrag(e)) return;
+        dragDepth.current = Math.max(0, dragDepth.current - 1);
+        if (dragDepth.current === 0) setDragging(false);
+      }}
+      onDrop={(e) => {
+        if (!isFileDrag(e)) return;
+        e.preventDefault();
+        dragDepth.current = 0;
+        setDragging(false);
+        composer.current?.addFiles([...e.dataTransfer.files]);
+      }}
+    >
+      {dragging && (
+        <div className="pointer-events-none absolute inset-0 z-30 flex animate-fade-up flex-col items-center justify-center gap-3 rounded-2xl bg-ink-950/80 text-primary ring-2 ring-primary ring-dashed backdrop-blur-sm">
+          <ImagePlus className="size-10" />
+          <p className="font-display text-lg font-semibold">Drop to share</p>
+          <p className="text-sm text-fg-muted">JPEG, PNG, GIF or WebP, up to 4 at a time</p>
+        </div>
+      )}
       {/* Above the message panel: both are frosted (backdrop-blur), which makes
           each its own layer, so the header's popovers need the header itself on top. */}
       <Panel className="relative z-20 flex flex-wrap items-center gap-3 px-4 py-3">
@@ -247,6 +282,7 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
       <div className="flex flex-col gap-1">
         <TypingIndicator username={typingUser} />
         <Composer
+          ref={composer}
           onSend={send}
           onTyping={notifyTyping}
           mentionables={mentionables}

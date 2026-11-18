@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import type { Env } from "../config/env";
-import { imageUpload, type ImageUploader } from "../lib/cloudinary";
+import {
+  chatImageUpload,
+  imageUpload,
+  type ChatImageStore,
+  type ImageUploader,
+} from "../lib/cloudinary";
+import { badRequest } from "../lib/http-error";
 import type { LinkPreviewer } from "../lib/link-preview";
 import type { Presence } from "../lib/presence";
 import { createAuthController } from "../controllers/auth.controller";
@@ -15,12 +21,13 @@ import { requireAuth } from "../middleware/auth";
 export interface ApiDeps {
   uploadImage: ImageUploader;
   presence: Presence;
+  chatImages: ChatImageStore;
   linkPreviewer: LinkPreviewer;
 }
 
 export function createApiRouter(
   env: Env,
-  { uploadImage, presence, linkPreviewer }: ApiDeps,
+  { uploadImage, presence, linkPreviewer, chatImages }: ApiDeps,
 ): Router {
   const auth = createAuthController(env, uploadImage);
   const discover = createDiscoverController(presence);
@@ -77,6 +84,24 @@ export function createApiRouter(
     message: { error: "Too many previews. Slow down a little." },
   });
   router.get("/link-preview", authed, previewLimiter, createLinkPreviewController(linkPreviewer));
+
+  const uploadLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: env.NODE_ENV === "test" ? 1000 : 30,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many uploads. Slow down a little." },
+  });
+  router.post(
+    "/uploads/images",
+    authed,
+    uploadLimiter,
+    chatImageUpload.single("image"),
+    async (req, res) => {
+      if (!req.file) throw badRequest("Attach an image");
+      res.status(201).json(await chatImages.upload(req.file));
+    },
+  );
 
   return router;
 }

@@ -46,6 +46,14 @@ interface MessageRecord {
   timestamp?: string | null;
   imageUrl?: string | null;
   cloudinary_id?: string | null;
+  attachments?:
+    | {
+        url?: string | null;
+        cloudinary_id?: string | null;
+        width?: number | null;
+        height?: number | null;
+      }[]
+    | null;
   mentions?: string[] | null;
   linkPreviewHidden?: boolean | null;
 }
@@ -58,6 +66,20 @@ export function toMessage(m: MessageRecord): ChatMessage {
     timestamp: m.timestamp ?? "",
     imageUrl: opt(m.imageUrl),
     cloudinary_id: opt(m.cloudinary_id),
+    ...(m.attachments?.length && {
+      attachments: m.attachments.flatMap((a) =>
+        a.url && a.cloudinary_id
+          ? [
+              {
+                url: a.url,
+                cloudinary_id: a.cloudinary_id,
+                width: opt(a.width),
+                height: opt(a.height),
+              },
+            ]
+          : [],
+      ),
+    }),
     ...(m.mentions?.length && { mentions: m.mentions }),
     ...(m.linkPreviewHidden && { linkPreviewHidden: true }),
   };
@@ -242,8 +264,7 @@ export async function addMessage(
     message: input.message,
     sentBy: username,
     timestamp: new Date().toISOString(),
-    ...(input.imageUrl && { imageUrl: input.imageUrl }),
-    ...(input.cloudinary_id && { cloudinary_id: input.cloudinary_id }),
+    ...(input.attachments?.length && { attachments: input.attachments }),
     ...(mentions.length > 0 && { mentions }),
   };
   const result = await RoomModel.updateOne(
@@ -275,11 +296,16 @@ export async function deleteMessage(
   username: string,
   roomNumber: number,
   messageId: string,
-): Promise<void> {
+): Promise<string[]> {
   const _id = new Types.ObjectId(messageId);
-  const result = await RoomModel.updateOne(
+  const before = await RoomModel.findOneAndUpdate(
     { room_number: roomNumber, messageHistory: { $elemMatch: { _id, sentBy: username } } },
     { $pull: { messageHistory: { _id } } },
+    { projection: { messageHistory: { $elemMatch: { _id } } } },
+  ).lean();
+  if (!before) throw forbidden("You can only delete your own messages");
+  // The deleted message's photos, so the caller can remove them from Cloudinary.
+  return (before.messageHistory?.[0]?.attachments ?? []).flatMap((a) =>
+    a.cloudinary_id ? [a.cloudinary_id] : [],
   );
-  if (result.matchedCount === 0) throw forbidden("You can only delete your own messages");
 }

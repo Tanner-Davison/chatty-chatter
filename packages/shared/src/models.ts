@@ -38,6 +38,14 @@ export interface User {
  * rewrite. Older messages hold whatever the old client formatted, such as
  * "11/26 12:44 am", so display code must fall back to the raw string.
  */
+/** A photo in a message, hosted in the app's Cloudinary folder. */
+export interface Attachment {
+  url: string;
+  cloudinary_id: string;
+  width?: number;
+  height?: number;
+}
+
 export interface ChatMessage {
   _id?: string;
   message: string;
@@ -45,6 +53,8 @@ export interface ChatMessage {
   timestamp: string;
   imageUrl?: string;
   cloudinary_id?: string;
+  /** Photos sent with the message. */
+  attachments?: Attachment[];
   /** Usernames this message notified. */
   mentions?: string[];
   /** The sender removed the link preview for everyone. */

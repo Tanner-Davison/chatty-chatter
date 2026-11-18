@@ -24,10 +24,24 @@ let httpServer: HttpServer;
 let io: ChatServer;
 let url: string;
 const clients: Client[] = [];
+const removedPhotos: string[] = [];
+const fakeImages = {
+  upload: async () => ({ url: "", cloudinary_id: "" }),
+  remove: async (ids: string[]) => {
+    removedPhotos.push(...ids);
+  },
+};
+const photo = (id: string) => ({
+  url: `https://res.cloudinary.com/dezclgtpg/image/upload/v1/chat_images/${id}.png`,
+  cloudinary_id: `chat_images/${id}`,
+  width: 800,
+  height: 600,
+});
 
 beforeEach(async () => {
   httpServer = createServer(app);
-  io = createSocketServer(env, httpServer);
+  removedPhotos.length = 0;
+  io = createSocketServer(env, httpServer, fakeImages);
   await new Promise<void>((resolve) => httpServer.listen(0, resolve));
   url = `http://localhost:${(httpServer.address() as AddressInfo).port}`;
   await Promise.all([seedUser("tanner"), seedUser("ben")]);
@@ -331,5 +345,62 @@ describe("delete_message", () => {
       error: "This room is private",
     });
     expect((await remove(tanner, 1, "not-an-id")).ok).toBe(false);
+  });
+});
+
+describe("photo messages", () => {
+  const sendPhotos = (socket: Client, room: number, message: string, attachments: unknown[]) =>
+    new Promise<AckResponse<ChatMessage>>((resolve) =>
+      socket.emit("send_message", { room, message, attachments } as never, resolve),
+    );
+
+  it("sends photos with or without text, and refuses outside images", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await Promise.all([join(tanner, 1), join(ben, 1)]);
+
+    const received = new Promise<{ message: ChatMessage }>((resolve) =>
+      ben.once("receive_message", resolve),
+    );
+    const ack = await sendPhotos(tanner, 1, "", [photo("a"), photo("b")]);
+    expect(ack.ok && ack.data.attachments).toEqual([photo("a"), photo("b")]);
+    expect((await received).message.attachments).toHaveLength(2);
+
+    const outside = { ...photo("x"), url: "https://evil.example/pixel.png" };
+    expect(await sendPhotos(tanner, 1, "hi", [outside])).toEqual({
+      ok: false,
+      error: "Photos must be uploaded through Chatty Chatter",
+    });
+    const otherFolder = {
+      url: "https://res.cloudinary.com/dezclgtpg/image/upload/v1/profile_photos/me.png",
+      cloudinary_id: "profile_photos/me",
+    };
+    expect((await sendPhotos(tanner, 1, "hi", [otherFolder])).ok).toBe(false);
+    expect((await sendPhotos(tanner, 1, "", [])).ok).toBe(false);
+    expect(
+      (
+        await sendPhotos(
+          tanner,
+          1,
+          "",
+          Array.from({ length: 5 }, (_, i) => photo(`p${i}`)),
+        )
+      ).ok,
+    ).toBe(false);
+
+    const history = (await (await loginAs("ben")).get("/api/rooms/1")).body.messageHistory;
+    expect(history.at(-1).attachments).toEqual([photo("a"), photo("b")]);
+    const discover = (await (await loginAs("ben")).get("/api/rooms/discover")).body;
+    expect(discover[0].lastMessage).toEqual({ message: "📷 Photo", sentBy: "tanner" });
+  });
+
+  it("removes a deleted message's photos from storage", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tanner = await connected("tanner");
+    await join(tanner, 1);
+    const ack = await sendPhotos(tanner, 1, "look", [photo("c")]);
+    const messageId = ack.ok ? ack.data._id! : "";
+    await new Promise((resolve) => tanner.emit("delete_message", { room: 1, messageId }, resolve));
+    expect(removedPhotos).toEqual(["chat_images/c"]);
   });
 });

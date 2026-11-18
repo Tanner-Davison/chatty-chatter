@@ -12,6 +12,7 @@ import {
   type SocketData,
 } from "@chatty/shared";
 import { isAllowedOrigin, type Env } from "../config/env";
+import { isOwnChatImage, unavailableImageStore, type ChatImageStore } from "../lib/cloudinary";
 import { HttpError } from "../lib/http-error";
 import type { Presence } from "../lib/presence";
 import { verifySocketToken } from "../lib/tokens";
@@ -50,7 +51,12 @@ function handle<S extends z.ZodType, T>(schema: S, fn: (payload: z.output<S>) =>
   };
 }
 
-function registerHandlers(io: ChatServer, socket: ChatSocket): void {
+function registerHandlers(
+  io: ChatServer,
+  socket: ChatSocket,
+  env: Env,
+  chatImages: ChatImageStore,
+): void {
   const { username } = socket.data;
   void socket.join(userChannel(username));
 
@@ -78,6 +84,9 @@ function registerHandlers(io: ChatServer, socket: ChatSocket): void {
       if (!socket.rooms.has(channel(payload.room))) {
         throw new HttpError(403, "Join the room before sending messages");
       }
+      if (payload.attachments?.some((a) => !isOwnChatImage(env, a))) {
+        throw new HttpError(400, "Photos must be uploaded through Chatty Chatter");
+      }
       const { message, notifications } = await messageService.sendMessage(username, payload);
       socket.to(channel(payload.room)).emit("receive_message", { room: payload.room, message });
       for (const { recipient, ...notification } of notifications) {
@@ -101,7 +110,8 @@ function registerHandlers(io: ChatServer, socket: ChatSocket): void {
     "delete_message",
     handle(messageRefSchema, async ({ room, messageId }) => {
       await roomService.assertCanAccess(username, room);
-      await roomService.deleteMessage(username, room, messageId);
+      const photos = await roomService.deleteMessage(username, room, messageId);
+      void chatImages.remove(photos);
       io.to(channel(room)).emit("message_deleted", { room, messageId });
       for (const recipient of await notificationService.removeForMessage(messageId)) {
         io.to(userChannel(recipient)).emit("notifications_changed");
@@ -120,7 +130,11 @@ function registerHandlers(io: ChatServer, socket: ChatSocket): void {
   );
 }
 
-export function createSocketServer(env: Env, httpServer: HttpServer): ChatServer {
+export function createSocketServer(
+  env: Env,
+  httpServer: HttpServer,
+  chatImages: ChatImageStore = unavailableImageStore,
+): ChatServer {
   const io: ChatServer = new Server(httpServer, {
     cors: {
       origin: (origin, cb) => cb(null, isAllowedOrigin(env, origin)),
@@ -137,7 +151,7 @@ export function createSocketServer(env: Env, httpServer: HttpServer): ChatServer
     next();
   });
 
-  io.on("connection", (socket) => registerHandlers(io, socket));
+  io.on("connection", (socket) => registerHandlers(io, socket, env, chatImages));
   return io;
 }
 

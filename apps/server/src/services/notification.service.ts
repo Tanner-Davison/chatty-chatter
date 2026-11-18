@@ -69,7 +69,7 @@ export async function notifyMentions(
       roomName: room?.room_name ?? undefined,
       messageId: message._id!,
       sentBy: message.sentBy,
-      preview: message.message.slice(0, PREVIEW_LENGTH),
+      preview: message.message.slice(0, PREVIEW_LENGTH) || "📷 Photo",
     })),
   );
   return docs.map((d) => ({

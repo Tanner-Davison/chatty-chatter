@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import type { ChatMessage } from "@chatty/shared";
+import type { Attachment, ChatMessage } from "@chatty/shared";
 import { chatReducer, type ChatEntry } from "./chatReducer";
 import { useSocket } from "./socketContext";
 
@@ -80,10 +80,11 @@ export function useChatRoom(
   }, [socket, room]);
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, attachments: Attachment[] = []) => {
       const tempId = `temp-${crypto.randomUUID()}`;
-      dispatch({ type: "sending", tempId, sentBy: username, text });
-      socket.timeout(10_000).emit("send_message", { room, message: text }, (err, res) => {
+      dispatch({ type: "sending", tempId, sentBy: username, text, attachments });
+      const payload = { room, message: text, ...(attachments.length > 0 && { attachments }) };
+      socket.timeout(10_000).emit("send_message", payload, (err, res) => {
         if (err || !res.ok) dispatch({ type: "failed", tempId });
         else dispatch({ type: "sent", tempId, message: res.data });
       });
