@@ -64,7 +64,11 @@ function registerHandlers(
   // Closing the tab or losing connection counts as having seen the open hub.
   socket.on("disconnecting", () => {
     for (const name of socket.rooms) {
-      if (name.startsWith("room:")) void roomService.markSeen(username, Number(name.slice(5)));
+      if (name.startsWith("room:"))
+        void roomService
+          .markSeen(username, Number(name.slice(5)))
+          // Best effort: the socket is already going away, so just log.
+          .catch((err: unknown) => console.error("Couldn't record last seen", err));
     }
   });
 
