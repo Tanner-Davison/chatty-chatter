@@ -8,7 +8,7 @@ const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_SECRET = process.env.CLOUDINARY_SECRET;
 const DATABASE_URL = process.env.DATABASE_URL;
 const bcrypt = require("bcryptjs");
-const saltRounds = 5;
+const saltRounds = 12;
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
@@ -64,11 +64,11 @@ module.exports = {
           await createNewUser.save();
           res
             .status(200)
-            .json({ message: "User created!", image, hashedPassword });
+            .json({ message: "User created!", image });
         }
       } catch (error) {
         console.error("Error registering user:", error);
-        res.sendStatus(500).send("Error registering user.");
+        res.status(500).send("Error registering user.");
       }
     });
   },
@@ -83,8 +83,8 @@ module.exports = {
     } else if (result === "INTERNAL SERVER ERROR") {
       res.status(500).send("Internal Server Error");
     } else {
-      // Authentication was successful, proceed with your logic
-      res.status(200).send(result);
+      const { password: _password, ...safeUser } = result.toObject();
+      res.status(200).send(safeUser);
     }
   },
 };

@@ -233,8 +233,6 @@ io.on("connection", (socket) => {
       });
     }
     socket.disconnect();
-    User.collection.drop();
-    Rooms.collection.drop();
   });
 
   socket.on("reconnection_attempt", () => {

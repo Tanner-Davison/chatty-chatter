@@ -31,7 +31,6 @@ function App() {
 
   const [userLoginInfo, setUserLoginInfo] = useState({
     username: "",
-    password: "",
     imageUrl: "",
     cloudinary_id: "",
   });
@@ -42,7 +41,6 @@ function App() {
     if (user) {
       const loggedInUser = {
         username: user.username,
-        password: user.password,
         imageUrl:
           user.profilePic.url ||
           "https://m.media-amazon.com/images/I/71zTE0u2iXL._AC_UY1000_.jpg",
@@ -54,7 +52,6 @@ function App() {
     } else {
       const newUserInfo = {
         username: JSON.parse(sessionStorage.getItem("username")),
-        password: JSON.parse(sessionStorage.getItem("password")),
         imageUrl: sessionStorage.getItem("image-url"),
         cloudinary_id: sessionStorage.getItem("cloudinary_id"),
       };

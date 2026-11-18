@@ -68,10 +68,6 @@ const Login = () => {
             sessionStorage.setItem("image-url", data.image.url);
             sessionStorage.setItem("cloudinary_id", data.image.cloudinary_id);
             sessionStorage.setItem(
-              "password",
-              JSON.stringify(data.hashedPassword)
-            );
-            sessionStorage.setItem(
               "username",
               JSON.stringify(username.toLowerCase())
             );

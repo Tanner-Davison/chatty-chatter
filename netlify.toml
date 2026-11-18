@@ -5,7 +5,7 @@
 [build.environment]
   # Use the newer Ubuntu Jammy build image (22.04)
   BUILD_IMAGE = "jammy"
-  NODE_VERSION = "18"
+  NODE_VERSION = "22"
 
 # Force HTTPS redirects
 [[redirects]]

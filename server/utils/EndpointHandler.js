@@ -14,7 +14,7 @@ module.exports = {
       `sent from user_info function endpoint handler`,
       req.params.username
     );
-    const user = await User.findOne({ username: req.params.username });
+    const user = await User.findOne({ username: req.params.username }).select("-password");
     if (user) {
       console.log("User was found successfully!");
       res.json(user);
