@@ -26,9 +26,12 @@ export function useLiveNotifications() {
         unreadCount: (prev?.unreadCount ?? 0) + 1,
       }));
     };
+    const onChanged = () => void queryClient.invalidateQueries({ queryKey: notificationsKey });
     socket.on("notification", onNotification);
+    socket.on("notifications_changed", onChanged);
     return () => {
       socket.off("notification", onNotification);
+      socket.off("notifications_changed", onChanged);
     };
   }, [socket, queryClient]);
 

@@ -15,6 +15,7 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", "Inter", ui-sans-serif, sans-serif;
   --font-logo: "Berkshire Swash", cursive;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* Neutrals: one blue-tinted family, darkest to lightest. */
   --color-ink-950: #05070b;
@@ -153,4 +154,59 @@
     0 0,
     14px 14px,
     0 0;
+}
+
+/* Syntax colours for code blocks, from the design system's role colours. */
+.hljs-comment,
+.hljs-quote {
+  color: var(--color-ink-400);
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-meta .hljs-keyword {
+  color: var(--color-private);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-template-string {
+  color: var(--color-public);
+}
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--color-warning);
+}
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: var(--color-primary);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-property {
+  color: #7dd3fc;
+}
+.hljs-type,
+.hljs-title.class_,
+.hljs-tag,
+.hljs-name {
+  color: #f9a8d4;
+}
+.hljs-deletion {
+  color: var(--color-danger);
+}
+.hljs-meta {
+  color: var(--color-ink-300);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 600;
 }

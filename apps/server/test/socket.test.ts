@@ -2,11 +2,12 @@ import { createServer, type Server as HttpServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type {
-  ChatMessage,
-  ClientToServerEvents,
-  Notification,
-  ServerToClientEvents,
+import {
+  MESSAGE_MAX_LENGTH,
+  type ChatMessage,
+  type ClientToServerEvents,
+  type Notification,
+  type ServerToClientEvents,
 } from "@chatty/shared";
 import request from "supertest";
 import { NotificationModel } from "../src/models/notification.model";
@@ -127,7 +128,7 @@ describe("chat events", () => {
     const tanner = await connected("tanner");
     await join(tanner, 1);
     expect((await send(tanner, 1, "   ")).ok).toBe(false);
-    expect((await send(tanner, 1, "x".repeat(501))).ok).toBe(false);
+    expect((await send(tanner, 1, "x".repeat(MESSAGE_MAX_LENGTH + 1))).ok).toBe(false);
     expect(await join(tanner, -1)).toMatchObject({ ok: false });
   });
 
@@ -189,6 +190,17 @@ describe("mentions", () => {
     expect(n1.preview).toBe("hey @Ben and @ghost and @tanner, look");
     expect(n2._id).toBe(n1._id);
     expect(await NotificationModel.countDocuments()).toBe(1);
+  });
+
+  it("ignores mentions inside code and accepts long code messages", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tanner = await connected("tanner");
+    await join(tanner, 1);
+    const code = "```ts\n" + "const who = '@ben';\n".repeat(150) + "```";
+    expect(code.length).toBeGreaterThan(500);
+    const ack = await send(tanner, 1, code);
+    expect(ack.ok && ack.data.mentions).toBeUndefined();
+    expect(await NotificationModel.countDocuments()).toBe(0);
   });
 
   it("doesn't notify people who can't see a private room", async () => {
@@ -269,5 +281,55 @@ describe("hide_link_preview", () => {
     expect(await updated).toEqual({ room: 1, messageId, linkPreviewHidden: true });
     const history = (await (await loginAs("ben")).get("/api/rooms/1")).body.messageHistory;
     expect(history.at(-1)).toMatchObject({ _id: messageId, linkPreviewHidden: true });
+  });
+});
+
+describe("delete_message", () => {
+  const remove = (socket: Client, room: number, messageId: string) =>
+    new Promise<AckResponse>((resolve) =>
+      socket.emit("delete_message", { room, messageId }, resolve),
+    );
+
+  it("lets only the sender delete, removes it for everyone, and clears its notifications", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await Promise.all([join(tanner, 1), join(ben, 1)]);
+    const ack = await send(tanner, 1, "oops @ben wrong room");
+    const messageId = ack.ok ? ack.data._id! : "";
+    expect(await NotificationModel.countDocuments({ messageId })).toBe(1);
+
+    expect(await remove(ben, 1, messageId)).toEqual({
+      ok: false,
+      error: "You can only delete your own messages",
+    });
+
+    const deleted = new Promise((resolve) => ben.once("message_deleted", resolve));
+    const changed = new Promise((resolve) =>
+      ben.once("notifications_changed", () => resolve(true)),
+    );
+    expect(await remove(tanner, 1, messageId)).toEqual({ ok: true });
+    expect(await deleted).toEqual({ room: 1, messageId });
+    expect(await changed).toBe(true);
+
+    const room = await RoomModel.findOne({ room_number: 1 });
+    expect(room?.messageHistory.some((m) => m._id?.toString() === messageId)).toBe(false);
+    expect(await NotificationModel.countDocuments({ messageId })).toBe(0);
+  });
+
+  it("refuses unknown ids and rooms you can't see", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    await seedRoom({
+      room_number: 9,
+      created_by: "ben",
+      private_room: true,
+      password: TEST_ROOM_PASSWORD,
+    });
+    const tanner = await connected("tanner");
+    expect((await remove(tanner, 1, "0".repeat(24))).ok).toBe(false);
+    expect(await remove(tanner, 9, "0".repeat(24))).toEqual({
+      ok: false,
+      error: "This room is private",
+    });
+    expect((await remove(tanner, 1, "not-an-id")).ok).toBe(false);
   });
 });

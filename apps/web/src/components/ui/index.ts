@@ -2,6 +2,7 @@ export { Avatar } from "./Avatar";
 export { AvatarStack } from "./AvatarStack";
 export { Badge, StatusDot, type BadgeTone } from "./Badge";
 export { Button, IconButton } from "./Button";
+export { ConfirmDialog } from "./ConfirmDialog";
 export { Field, Input, PasswordInput, Select, Textarea } from "./Field";
 export { Logo } from "./Logo";
 export { Menu, type MenuItem } from "./Menu";

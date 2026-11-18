@@ -96,3 +96,10 @@ export async function markRead(username: string, ids?: string[]): Promise<void> 
     { $set: { read: true } },
   );
 }
+
+/** Removes the notifications a deleted message created; returns who had them. */
+export async function removeForMessage(messageId: string): Promise<string[]> {
+  const recipients: string[] = await NotificationModel.distinct("recipient", { messageId });
+  if (recipients.length > 0) await NotificationModel.deleteMany({ messageId });
+  return recipients;
+}

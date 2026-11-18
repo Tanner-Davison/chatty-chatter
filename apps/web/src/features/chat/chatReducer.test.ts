@@ -58,4 +58,9 @@ describe("chatReducer", () => {
     const next = chatReducer(state, { type: "previewHidden", messageId: "b" });
     expect(next.map((m) => m.linkPreviewHidden)).toEqual([undefined, true]);
   });
+
+  it("removes a deleted message", () => {
+    const state = chatReducer([], { type: "loaded", messages: [msg("a"), msg("b")] });
+    expect(chatReducer(state, { type: "deleted", key: "a" }).map((m) => m.key)).toEqual(["b"]);
+  });
 });

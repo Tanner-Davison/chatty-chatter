@@ -1,16 +1,55 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, BellMinus, BellPlus, Crown, Lock, Plus } from "lucide-react";
 import type { Room } from "@chatty/shared";
-import { Badge, Button, LoadingBlock, Panel, StatusDot } from "../../components/ui";
+import { Badge, Button, ConfirmDialog, LoadingBlock, Panel, StatusDot } from "../../components/ui";
 import { useCurrentUser } from "../auth/currentUser";
 import { useJoinRoom, useLeaveRoom, useMyRooms, useRoom } from "../rooms/api";
+import { ChatSettings } from "./ChatSettings";
 import { Composer } from "./Composer";
 import { messageAnchor } from "./anchors";
+import type { ChatEntry } from "./chatReducer";
+import { MentionNavigator } from "./MentionNavigator";
 import { MessageBubble } from "./MessageBubble";
 import { PrivateRoomGate } from "./PrivateRoomGate";
 import { TypingIndicator } from "./TypingIndicator";
+import { useRoomColors } from "./roomColors";
 import { useChatRoom } from "./useChatRoom";
+
+/**
+ * Scrolls a message to the centre and marks it with a quiet "you were sent
+ * here" cue: a faint amber row tint (the colour of mentions of you) and a thin
+ * left bar that wait for the scroll to land, hold briefly, then fade.
+ */
+function focusMessage(key: string) {
+  const el = document.getElementById(messageAnchor(key));
+  if (!el) return;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+  const on = {
+    backgroundColor: "rgb(251 191 36 / 0.1)",
+    boxShadow: "inset 2px 0 0 rgb(251 191 36 / 0.85)",
+  };
+  const off = {
+    backgroundColor: "rgb(251 191 36 / 0)",
+    boxShadow: "inset 2px 0 0 rgb(251 191 36 / 0)",
+  };
+  el.getAnimations().forEach((a) => a.id === "focus" && a.cancel());
+  const animation = el.animate(
+    [
+      { ...on, offset: 0 },
+      { ...on, offset: 0.45 },
+      { ...off, offset: 1 },
+    ],
+    {
+      duration: 3200,
+      delay: reduceMotion ? 0 : 350,
+      easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+      fill: "backwards",
+    },
+  );
+  animation.id = "focus";
+}
 
 export function ChatPage() {
   const roomNumber = Number(useParams().room);
@@ -43,8 +82,18 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
   const user = useCurrentUser();
   const navigate = useNavigate();
   const reload = useCallback(() => onReconnect(), [onReconnect]);
-  const { messages, send, notifyTyping, hidePreview, typingUser, connected, joinError } =
-    useChatRoom(room.room_number, room.messageHistory, user.username, reload);
+  const {
+    messages,
+    send,
+    notifyTyping,
+    hidePreview,
+    deleteMessage,
+    typingUser,
+    connected,
+    joinError,
+  } = useChatRoom(room.room_number, room.messageHistory, user.username, reload);
+  const colors = useRoomColors(room.room_number);
+  const [confirmDelete, setConfirmDelete] = useState<ChatEntry | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
   // Whether the view should stay pinned to the newest message. Scrolling up to
@@ -82,34 +131,7 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
   useEffect(() => {
     if (!target || !targetLoaded || jumpedTo.current === target) return;
     jumpedTo.current = target;
-    const el = document.getElementById(messageAnchor(target));
-    if (!el) return;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    el.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
-    // A quiet "you were sent here" cue: a faint amber row tint (the colour of
-    // mentions of you) with a thin left bar. It waits for the scroll to land,
-    // holds briefly, then fades.
-    const on = {
-      backgroundColor: "rgb(251 191 36 / 0.1)",
-      boxShadow: "inset 2px 0 0 rgb(251 191 36 / 0.85)",
-    };
-    const off = {
-      backgroundColor: "rgb(251 191 36 / 0)",
-      boxShadow: "inset 2px 0 0 rgb(251 191 36 / 0)",
-    };
-    el.animate(
-      [
-        { ...on, offset: 0 },
-        { ...on, offset: 0.45 },
-        { ...off, offset: 1 },
-      ],
-      {
-        duration: 3200,
-        delay: reduceMotion ? 0 : 350,
-        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-        fill: "backwards",
-      },
-    );
+    focusMessage(target);
   }, [target, targetLoaded]);
   const clearTarget = () =>
     setParams(
@@ -130,7 +152,9 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] flex-col gap-3">
-      <Panel className="flex flex-wrap items-center gap-3 px-4 py-3">
+      {/* Above the message panel: both are frosted (backdrop-blur), which makes
+          each its own layer, so the header's popovers need the header itself on top. */}
+      <Panel className="relative z-20 flex flex-wrap items-center gap-3 px-4 py-3">
         <Button
           variant="ghost"
           size="sm"
@@ -157,9 +181,19 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
         </div>
         <StatusDot online={connected && !joinError} label={joinError ?? undefined} />
         <SubscribeButton room={room} />
+        <ChatSettings roomNumber={room.room_number} />
       </Panel>
 
       <Panel className="relative min-h-0 flex-1">
+        <MentionNavigator
+          room={room.room_number}
+          messages={messages}
+          me={user.username}
+          onJump={(key) => {
+            pinned.current = false;
+            focusMessage(key);
+          }}
+        />
         {missedTarget && (
           <p
             role="status"
@@ -194,7 +228,16 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
                 isOwn={message.sentBy === user.username}
                 startsGroup={messages[i - 1]?.sentBy !== message.sentBy}
                 me={user.username}
+                bubbleClass={
+                  message.sentBy === user.username ? colors.sentClass : colors.receivedClass
+                }
+                ownMentionClass={colors.sentMentionClass}
                 onRemovePreview={hidePreview}
+                onDelete={
+                  message.sentBy === user.username && message.status !== "pending"
+                    ? () => setConfirmDelete(message)
+                    : undefined
+                }
               />
             ))}
           </ol>
@@ -210,6 +253,19 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
           disabled={!connected}
         />
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Delete message?"
+        confirmLabel="Delete"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) deleteMessage(confirmDelete);
+          setConfirmDelete(null);
+        }}
+      >
+        This removes it for everyone in the hub. You can't undo this.
+      </ConfirmDialog>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Server, type Socket } from "socket.io";
 import type { z } from "zod";
 import {
   hideLinkPreviewSchema,
+  messageRefSchema,
   roomEventSchema,
   sendMessageSchema,
   type Ack,
@@ -15,6 +16,7 @@ import { HttpError } from "../lib/http-error";
 import type { Presence } from "../lib/presence";
 import { verifySocketToken } from "../lib/tokens";
 import * as messageService from "../services/message.service";
+import * as notificationService from "../services/notification.service";
 import * as roomService from "../services/room.service";
 
 export type ChatServer = Server<ClientToServerEvents, ServerToClientEvents, object, SocketData>;
@@ -91,6 +93,19 @@ function registerHandlers(io: ChatServer, socket: ChatSocket): void {
       await roomService.assertCanAccess(username, room);
       await roomService.hideLinkPreview(username, room, messageId);
       io.to(channel(room)).emit("message_updated", { room, messageId, linkPreviewHidden: true });
+      return undefined;
+    }),
+  );
+
+  socket.on(
+    "delete_message",
+    handle(messageRefSchema, async ({ room, messageId }) => {
+      await roomService.assertCanAccess(username, room);
+      await roomService.deleteMessage(username, room, messageId);
+      io.to(channel(room)).emit("message_deleted", { room, messageId });
+      for (const recipient of await notificationService.removeForMessage(messageId)) {
+        io.to(userChannel(recipient)).emit("notifications_changed");
+      }
       return undefined;
     }),
   );

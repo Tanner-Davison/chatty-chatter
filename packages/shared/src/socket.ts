@@ -3,7 +3,12 @@
 // payloads never carry a username.
 
 import type { ChatMessage, Notification } from "./models";
-import type { HideLinkPreviewInput, RoomEventPayload, SendMessageInput } from "./schemas";
+import type {
+  HideLinkPreviewInput,
+  MessageRef,
+  RoomEventPayload,
+  SendMessageInput,
+} from "./schemas";
 
 export type Ack<T = undefined> = (
   response: { ok: true; data: T } | { ok: false; error: string },
@@ -16,6 +21,8 @@ export interface ClientToServerEvents {
   typing: (payload: RoomEventPayload) => void;
   /** Only the sender may remove a message's link preview for everyone. */
   hide_link_preview: (payload: HideLinkPreviewInput, ack: Ack) => void;
+  /** Only the sender may delete a message; it disappears for everyone. */
+  delete_message: (payload: MessageRef, ack: Ack) => void;
 }
 
 export interface ServerToClientEvents {
@@ -28,6 +35,9 @@ export interface ServerToClientEvents {
   }) => void;
   /** Sent only to the user it's for. */
   notification: (payload: Notification) => void;
+  message_deleted: (payload: MessageRef) => void;
+  /** The user's notifications changed (e.g. one was removed); refetch them. */
+  notifications_changed: () => void;
 }
 
 export interface SocketData {

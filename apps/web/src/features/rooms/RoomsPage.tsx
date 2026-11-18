@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { MessagesSquare, Plus } from "lucide-react";
 import type { RoomSummary } from "@chatty/shared";
-import { Button, LoadingBlock } from "../../components/ui";
+import { Button, ConfirmDialog, LoadingBlock } from "../../components/ui";
 import { useCurrentUser } from "../auth/currentUser";
 import { DiscoverTeaser } from "../explore/DiscoverTeaser";
 import { useDeleteRoom, useLeaveRoom, useMyRooms } from "./api";
@@ -20,15 +21,8 @@ export function RoomsPage() {
   const created = mine.data?.created ?? [];
   const isNewUser = mine.isSuccess && created.length === 0 && mine.data.joined.length === 0;
 
-  const onDelete = (room: RoomSummary) => {
-    if (
-      window.confirm(
-        `Delete "${room.room_name ?? room.room_number}" and all its messages? This can't be undone.`,
-      )
-    ) {
-      remove.mutate(room.room_number);
-    }
-  };
+  const [deleting, setDeleting] = useState<RoomSummary | null>(null);
+  const onDelete = (room: RoomSummary) => setDeleting(room);
 
   return (
     <div className="flex flex-col gap-5">
@@ -89,6 +83,19 @@ export function RoomsPage() {
       )}
 
       <DiscoverTeaser />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title={`Delete "${deleting?.room_name ?? deleting?.room_number}"?`}
+        confirmLabel="Delete hub"
+        loading={remove.isPending}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() =>
+          deleting && remove.mutate(deleting.room_number, { onSettled: () => setDeleting(null) })
+        }
+      >
+        The hub and all its messages are removed for everyone. You can't undo this.
+      </ConfirmDialog>
     </div>
   );
 }

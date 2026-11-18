@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { ChatMessage } from "@chatty/shared";
-import { chatReducer } from "./chatReducer";
+import { chatReducer, type ChatEntry } from "./chatReducer";
 import { useSocket } from "./socketContext";
 
 const TYPING_SHOWN_MS = 4000;
@@ -65,12 +65,17 @@ export function useChatRoom(
     };
     socket.on("receive_message", onMessage);
     socket.on("sender_is_typing", onTyping);
+    const onDeleted = (payload: { room: number; messageId: string }) => {
+      if (payload.room === room) dispatch({ type: "deleted", key: payload.messageId });
+    };
     socket.on("message_updated", onUpdated);
+    socket.on("message_deleted", onDeleted);
     return () => {
       clearTimeout(typingTimer);
       socket.off("receive_message", onMessage);
       socket.off("sender_is_typing", onTyping);
       socket.off("message_updated", onUpdated);
+      socket.off("message_deleted", onDeleted);
     };
   }, [socket, room]);
 
@@ -102,5 +107,29 @@ export function useChatRoom(
     [socket, room],
   );
 
-  return { messages, send, notifyTyping, hidePreview, typingUser, connected, joinError };
+  /**
+   * Deletes your message for everyone. It disappears right away; if the server
+   * refuses, history reloads to bring it back. Unsent messages only exist here.
+   */
+  const deleteMessage = useCallback(
+    (message: ChatEntry) => {
+      dispatch({ type: "deleted", key: message.key });
+      if (message.status !== "sent" || !message._id) return;
+      socket.emit("delete_message", { room, messageId: message._id }, (res) => {
+        if (!res.ok) onReconnect();
+      });
+    },
+    [socket, room, onReconnect],
+  );
+
+  return {
+    messages,
+    send,
+    notifyTyping,
+    hidePreview,
+    deleteMessage,
+    typingUser,
+    connected,
+    joinError,
+  };
 }

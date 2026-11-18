@@ -3,6 +3,7 @@
 // sent by the client; identity always comes from the auth token.
 
 import { z } from "zod";
+import { RECEIVED_COLORS, SENT_COLORS } from "./preferences";
 
 export const USERNAME_PATTERN = /^[a-z0-9_.-]+$/;
 
@@ -76,7 +77,8 @@ export const searchRoomsQuerySchema = z.object({
 
 // Socket.IO payloads
 
-export const MESSAGE_MAX_LENGTH = 500;
+/** Long enough to share a code template. */
+export const MESSAGE_MAX_LENGTH = 4000;
 
 export const roomEventSchema = z.object({ room: roomNumberSchema });
 export type RoomEventPayload = z.infer<typeof roomEventSchema>;
@@ -125,11 +127,12 @@ export type DiscoverQuery = z.input<typeof discoverQuerySchema>;
 
 export const objectIdSchema = z.string().regex(/^[a-f0-9]{24}$/, "Invalid id");
 
-export const hideLinkPreviewSchema = z.object({
-  room: roomNumberSchema,
-  messageId: objectIdSchema,
-});
-export type HideLinkPreviewInput = z.infer<typeof hideLinkPreviewSchema>;
+/** Points at one message in a room. */
+export const messageRefSchema = z.object({ room: roomNumberSchema, messageId: objectIdSchema });
+export type MessageRef = z.infer<typeof messageRefSchema>;
+
+export const hideLinkPreviewSchema = messageRefSchema;
+export type HideLinkPreviewInput = MessageRef;
 
 export const linkPreviewQuerySchema = z.object({
   url: z.url({ protocol: /^https?$/ }).max(2000),
@@ -139,3 +142,10 @@ export const markNotificationsReadSchema = z.object({
   /** Omit to mark everything read. */
   ids: z.array(objectIdSchema).max(100).optional(),
 });
+
+/** null resets a colour to the default. */
+export const roomPreferencesSchema = z.object({
+  sentColor: z.enum(SENT_COLORS).nullable().optional(),
+  receivedColor: z.enum(RECEIVED_COLORS).nullable().optional(),
+});
+export type RoomPreferencesInput = z.infer<typeof roomPreferencesSchema>;

@@ -1,14 +1,14 @@
-import { Fragment } from "react";
 import { Link } from "react-router";
-import { AlertCircle } from "lucide-react";
-import { splitMentions } from "@chatty/shared";
+import { AlertCircle, Trash2 } from "lucide-react";
 import { Avatar } from "../../components/ui";
 import { cn } from "../../lib/cn";
-import { formatMessageTime, linkify } from "../../lib/format";
+import { formatMessageTime } from "../../lib/format";
+import { firstLink } from "../../lib/markup";
 import { useUserProfile } from "../profile/api";
 import type { ChatEntry } from "./chatReducer";
 import { messageAnchor } from "./anchors";
 import { LinkPreviewCard } from "./LinkPreviewCard";
+import { MessageContent } from "./MessageContent";
 
 interface MessageBubbleProps {
   message: ChatEntry;
@@ -16,7 +16,13 @@ interface MessageBubbleProps {
   /** First message in a run from the same sender: shows avatar and name. */
   startsGroup: boolean;
   me: string;
+  /** Bubble classes from the hub's colour settings. */
+  bubbleClass: string;
+  /** Colour for @names in your own messages. */
+  ownMentionClass: string;
   onRemovePreview: (messageId: string) => void;
+  /** Asks to delete this message; only passed for your own sent or failed messages. */
+  onDelete?: (() => void) | undefined;
 }
 
 export function MessageBubble({
@@ -24,7 +30,10 @@ export function MessageBubble({
   isOwn,
   startsGroup,
   me,
+  bubbleClass,
+  ownMentionClass,
   onRemovePreview,
+  onDelete,
 }: MessageBubbleProps) {
   const { data: sender } = useUserProfile(startsGroup ? message.sentBy : undefined);
   // Old messages stored the sender's photo on the message itself.
@@ -32,14 +41,14 @@ export function MessageBubble({
   const mentionsMe = !isOwn && Boolean(message.mentions?.includes(me));
   const firstUrl =
     message.status === "sent" && !message.linkPreviewHidden
-      ? linkify(message.message).find((p) => p.href)?.href
+      ? firstLink(message.message)
       : undefined;
 
   return (
     <li
       id={messageAnchor(message.key)}
       className={cn(
-        "-mx-3 flex scroll-mt-24 animate-fade-up gap-3 px-3 py-0.5 sm:-mx-6 sm:px-6",
+        "group/msg -mx-3 flex scroll-mt-24 animate-fade-up gap-3 px-3 py-0.5 sm:-mx-6 sm:px-6",
         isOwn && "flex-row-reverse",
         startsGroup ? "mt-4" : "mt-1",
       )}
@@ -51,7 +60,7 @@ export function MessageBubble({
           </Link>
         )}
       </div>
-      <div className={cn("flex max-w-[75%] flex-col gap-1", isOwn && "items-end")}>
+      <div className={cn("flex max-w-[75%] min-w-0 flex-col gap-1", isOwn && "items-end")}>
         {startsGroup && (
           <p className={cn("flex items-baseline gap-2 text-xs", isOwn && "flex-row-reverse")}>
             <span className="font-display font-semibold tracking-wide text-fg-muted uppercase">
@@ -62,21 +71,43 @@ export function MessageBubble({
             </time>
           </p>
         )}
-        <p
-          className={cn(
-            "rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed break-words whitespace-pre-wrap",
-            isOwn
-              ? "rounded-tr-md bg-gradient-to-br from-primary to-primary-strong text-primary-fg shadow-glow-primary"
-              : "rounded-tl-md bg-surface-overlay text-fg ring-1 ring-line-strong",
-            // Like Slack: messages that mention you stand out.
-            mentionsMe && "bg-warning/10 ring-2 ring-warning/50",
-            message.status === "pending" && "opacity-60",
-            message.status === "failed" &&
-              "bg-none bg-danger-soft text-danger ring-1 ring-danger/50 shadow-none",
-          )}
+        <div
+          className={cn("flex max-w-full min-w-0 items-start gap-1.5", isOwn && "flex-row-reverse")}
         >
-          <MessageText text={message.message} isOwn={isOwn} me={me} />
-        </p>
+          <div
+            className={cn(
+              "flex max-w-full min-w-0 flex-col gap-1 rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
+              isOwn ? "rounded-tr-md" : "rounded-tl-md",
+              bubbleClass,
+              // Like Slack: messages that mention you stand out.
+              mentionsMe && "ring-2 ring-warning/70",
+              message.status === "pending" && "opacity-60",
+              message.status === "failed" &&
+                "bg-none bg-danger-soft text-danger ring-1 ring-danger/50 shadow-none",
+            )}
+          >
+            <MessageContent
+              text={message.message}
+              isOwn={isOwn}
+              me={me}
+              ownMentionClass={ownMentionClass}
+            />
+          </div>
+          {onDelete && (
+            // Slack-style hover toolbar beside the bubble; also shows on keyboard focus.
+            <div className="flex shrink-0 self-center rounded-lg bg-surface-overlay p-0.5 opacity-0 shadow-panel ring-1 ring-line-strong transition group-hover/msg:opacity-100 focus-within:opacity-100">
+              <button
+                type="button"
+                onClick={onDelete}
+                aria-label="Delete message"
+                title="Delete message"
+                className="flex size-7 cursor-pointer items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          )}
+        </div>
         {firstUrl && message._id && (
           <LinkPreviewCard
             url={firstUrl}
@@ -92,45 +123,5 @@ export function MessageBubble({
         )}
       </div>
     </li>
-  );
-}
-
-/** Message text with clickable links and highlighted @mentions. */
-function MessageText({ text, isOwn, me }: { text: string; isOwn: boolean; me: string }) {
-  return splitMentions(text).map((part, i) =>
-    part.mention ? (
-      <Link
-        key={i}
-        to={`/profile/${part.mention}`}
-        className={cn(
-          "rounded-md px-1 font-semibold",
-          isOwn
-            ? "bg-ink-950/85 text-primary hover:bg-ink-950"
-            : part.mention === me
-              ? "bg-warning/20 text-warning"
-              : "bg-primary-soft text-primary hover:bg-primary/20",
-        )}
-      >
-        {part.text}
-      </Link>
-    ) : (
-      <Fragment key={i}>
-        {linkify(part.text).map((piece, j) =>
-          piece.href ? (
-            <a
-              key={j}
-              href={piece.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2"
-            >
-              {piece.text}
-            </a>
-          ) : (
-            piece.text
-          ),
-        )}
-      </Fragment>
-    ),
   );
 }

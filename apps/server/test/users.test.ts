@@ -60,3 +60,51 @@ describe("friends", () => {
     await tanner.put("/api/users/me/friends/ghost").expect(404);
   });
 });
+
+describe("PATCH /api/users/me/rooms/:roomNumber/preferences", () => {
+  it("saves, updates and resets colours per hub", async () => {
+    const set = await tanner
+      .patch("/api/users/me/rooms/7/preferences")
+      .send({ sentColor: "violet", receivedColor: "ocean" })
+      .expect(200);
+    expect(set.body.roomPreferences).toEqual({
+      7: { sentColor: "violet", receivedColor: "ocean" },
+    });
+
+    await tanner
+      .patch("/api/users/me/rooms/8/preferences")
+      .send({ sentColor: "amber" })
+      .expect(200);
+    const reset = await tanner
+      .patch("/api/users/me/rooms/7/preferences")
+      .send({ sentColor: null })
+      .expect(200);
+    expect(reset.body.roomPreferences).toEqual({
+      7: { receivedColor: "ocean" },
+      8: { sentColor: "amber" },
+    });
+    const me = await tanner.get("/api/auth/me").expect(200);
+    expect(me.body.roomPreferences["8"]).toEqual({ sentColor: "amber" });
+  });
+
+  it("rejects colours outside the palette", async () => {
+    await tanner
+      .patch("/api/users/me/rooms/7/preferences")
+      .send({ sentColor: "#ff0000" })
+      .expect(400);
+    await tanner
+      .patch("/api/users/me/rooms/abc/preferences")
+      .send({ sentColor: "violet" })
+      .expect(400);
+  });
+
+  it("keeps colour choices private", async () => {
+    await tanner
+      .patch("/api/users/me/rooms/7/preferences")
+      .send({ sentColor: "violet" })
+      .expect(200);
+    const ben = await loginAs("ben");
+    const { body } = await ben.get("/api/users/tanner").expect(200);
+    expect(body).not.toHaveProperty("roomPreferences");
+  });
+});
