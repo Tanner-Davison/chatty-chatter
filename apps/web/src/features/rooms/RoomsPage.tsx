@@ -2,7 +2,7 @@ import { useNavigate } from "react-router";
 import { MessagesSquare, Plus } from "lucide-react";
 import type { RoomSummary } from "@chatty/shared";
 import { Button, LoadingBlock } from "../../components/ui";
-import { useCurrentUser } from "../auth/api";
+import { useCurrentUser } from "../auth/currentUser";
 import { useDeleteRoom, useExploreRooms, useLeaveRoom, useMyRooms } from "./api";
 import { RoomGrid } from "./RoomGrid";
 

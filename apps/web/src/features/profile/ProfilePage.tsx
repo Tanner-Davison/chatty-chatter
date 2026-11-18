@@ -4,7 +4,7 @@ import { Briefcase, GraduationCap, Pencil, UserMinus, UserPlus, Users } from "lu
 import type { User } from "@chatty/shared";
 import { Avatar, Button, LoadingBlock, Panel, PanelHeader } from "../../components/ui";
 import { isStatus } from "../../lib/api";
-import { useCurrentUser } from "../auth/api";
+import { useCurrentUser } from "../auth/currentUser";
 import { useFriendship, useSetFriend, useUserProfile } from "./api";
 import { EditProfileForm } from "./EditProfileForm";
 

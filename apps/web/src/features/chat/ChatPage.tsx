@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 import { ArrowLeft, BellMinus, BellPlus, Crown, Lock, Plus } from "lucide-react";
 import type { Room } from "@chatty/shared";
 import { Badge, Button, LoadingBlock, Panel, StatusDot } from "../../components/ui";
-import { useCurrentUser } from "../auth/api";
+import { useCurrentUser } from "../auth/currentUser";
 import { useJoinRoom, useLeaveRoom, useMyRooms, useRoom } from "../rooms/api";
 import { Composer } from "./Composer";
 import { MessageBubble } from "./MessageBubble";

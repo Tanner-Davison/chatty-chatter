@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
 import { LayoutGrid, LogOut, Menu as MenuIcon, PlusSquare, UserRound, X } from "lucide-react";
-import { useCurrentUser, useLogout } from "../../features/auth/api";
+import { useLogout } from "../../features/auth/api";
+import { useCurrentUser } from "../../features/auth/currentUser";
 import { HubFinder } from "../../features/rooms/HubFinder";
 import { cn } from "../../lib/cn";
 import { Avatar, Button, IconButton, Logo } from "../ui";

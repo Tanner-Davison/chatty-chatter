@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from "react-router";
 import { LoadingBlock } from "../../components/ui";
 import { SocketProvider } from "../chat/SocketProvider";
 import { useMe } from "./api";
+import { CurrentUserContext } from "./currentUser";
 
 /** Renders child routes only for a logged-in user, with the chat socket available. */
 export function RequireAuth() {
@@ -11,8 +12,10 @@ export function RequireAuth() {
   if (isPending) return <LoadingBlock />;
   if (!user) return <Navigate to="/" replace state={{ from: location.pathname }} />;
   return (
-    <SocketProvider>
-      <Outlet />
-    </SocketProvider>
+    <CurrentUserContext value={user}>
+      <SocketProvider>
+        <Outlet />
+      </SocketProvider>
+    </CurrentUserContext>
   );
 }
