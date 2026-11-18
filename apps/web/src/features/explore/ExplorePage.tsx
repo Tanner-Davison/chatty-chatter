@@ -126,7 +126,7 @@ export function ExplorePage() {
         </div>
       </div>
 
-      <nav aria-label="Categories" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      <nav aria-label="Categories" className="-mx-4 -my-1 flex gap-2 overflow-x-auto px-4 py-1.5">
         <CategoryChip
           active={!category}
           onClick={() => update({ category: undefined })}
@@ -251,7 +251,7 @@ function Row({
         }
         accent={accent}
       />
-      <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+      <div className="-mx-4 -mt-2 flex snap-x gap-3 overflow-x-auto px-4 pt-3 pb-4">
         {rooms.map((room) => (
           <HubCard
             key={room._id}

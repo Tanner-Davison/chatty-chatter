@@ -1,4 +1,4 @@
-import type { UpdateProfileInput } from "@chatty/shared";
+import type { RoomPreferencesInput, UpdateProfileInput } from "@chatty/shared";
 import { badRequest, notFound } from "../lib/http-error";
 import { UserModel, type UserDocument } from "../models/user.model";
 
@@ -33,4 +33,30 @@ export async function addFriend(username: string, friend: string): Promise<void>
 
 export async function removeFriend(username: string, friend: string): Promise<void> {
   await UserModel.updateOne({ username }, { $pull: { friends: friend } });
+}
+
+/** Sets (or, with null, clears) the user's chat colours for one hub. */
+export async function setRoomPreferences(
+  username: string,
+  roomNumber: number,
+  changes: RoomPreferencesInput,
+): Promise<UserDocument> {
+  const set: Record<string, string> = {};
+  const unset: Record<string, ""> = {};
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === undefined) continue;
+    const path = `roomPreferences.${roomNumber}.${key}`;
+    if (value === null) unset[path] = "";
+    else set[path] = value;
+  }
+  const user = await UserModel.findOneAndUpdate(
+    { username },
+    {
+      ...(Object.keys(set).length && { $set: set }),
+      ...(Object.keys(unset).length && { $unset: unset }),
+    },
+    { returnDocument: "after" },
+  );
+  if (!user) throw notFound("User not found");
+  return user;
 }

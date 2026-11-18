@@ -2,11 +2,12 @@ import { createServer, type Server as HttpServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type {
-  ChatMessage,
-  ClientToServerEvents,
-  Notification,
-  ServerToClientEvents,
+import {
+  MESSAGE_MAX_LENGTH,
+  type ChatMessage,
+  type ClientToServerEvents,
+  type Notification,
+  type ServerToClientEvents,
 } from "@chatty/shared";
 import request from "supertest";
 import { NotificationModel } from "../src/models/notification.model";
@@ -127,7 +128,7 @@ describe("chat events", () => {
     const tanner = await connected("tanner");
     await join(tanner, 1);
     expect((await send(tanner, 1, "   ")).ok).toBe(false);
-    expect((await send(tanner, 1, "x".repeat(501))).ok).toBe(false);
+    expect((await send(tanner, 1, "x".repeat(MESSAGE_MAX_LENGTH + 1))).ok).toBe(false);
     expect(await join(tanner, -1)).toMatchObject({ ok: false });
   });
 
@@ -189,6 +190,17 @@ describe("mentions", () => {
     expect(n1.preview).toBe("hey @Ben and @ghost and @tanner, look");
     expect(n2._id).toBe(n1._id);
     expect(await NotificationModel.countDocuments()).toBe(1);
+  });
+
+  it("ignores mentions inside code and accepts long code messages", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tanner = await connected("tanner");
+    await join(tanner, 1);
+    const code = "```ts\n" + "const who = '@ben';\n".repeat(150) + "```";
+    expect(code.length).toBeGreaterThan(500);
+    const ack = await send(tanner, 1, code);
+    expect(ack.ok && ack.data.mentions).toBeUndefined();
+    expect(await NotificationModel.countDocuments()).toBe(0);
   });
 
   it("doesn't notify people who can't see a private room", async () => {

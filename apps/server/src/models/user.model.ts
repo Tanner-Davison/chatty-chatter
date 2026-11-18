@@ -21,6 +21,12 @@ const userSchema = new Schema(
       },
     ],
     friends: [String],
+    // Chat colours per hub, keyed by room number.
+    roomPreferences: {
+      type: Map,
+      of: new Schema({ sentColor: String, receivedColor: String }, { _id: false }),
+      default: undefined,
+    },
     profileBio: String,
     education: String,
     profession: String,

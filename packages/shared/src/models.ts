@@ -1,3 +1,5 @@
+import type { RoomPreferences } from "./preferences";
+
 // Shapes the API returns. They keep the Mongoose field names so live data needs
 // no migration. Password hashes (user and private room) are never sent.
 
@@ -27,6 +29,8 @@ export interface User {
   profileBio?: string;
   education?: string;
   profession?: string;
+  /** Chat colours chosen per hub, keyed by room number. Only on your own profile. */
+  roomPreferences?: Record<string, RoomPreferences>;
 }
 
 /**

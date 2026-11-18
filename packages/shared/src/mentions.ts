@@ -7,10 +7,18 @@ export const MENTION_PATTERN = /(?<![\w@.])@([a-z0-9_.-]+(?:@[a-z0-9-]+(?:\.[a-z
 
 export const MAX_MENTIONS = 10;
 
+/**
+ * The message with code blocks (```...```) and inline code (`...`) blanked
+ * out, so an @name inside shared code doesn't notify anyone.
+ */
+export function stripCode(text: string): string {
+  return text.replace(/```[\s\S]*?(```|$)/g, " ").replace(/`[^`\n]*`/g, " ");
+}
+
 /** Usernames mentioned in a message, lowercased, deduplicated, trailing dots trimmed. */
 export function extractMentions(text: string): string[] {
   const found = new Set<string>();
-  for (const match of text.matchAll(MENTION_PATTERN)) {
+  for (const match of stripCode(text).matchAll(MENTION_PATTERN)) {
     const username = match[1]!.toLowerCase().replace(/[.-]+$/, "");
     if (username) found.add(username);
     if (found.size >= MAX_MENTIONS) break;

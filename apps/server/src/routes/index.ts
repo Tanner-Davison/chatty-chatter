@@ -47,6 +47,7 @@ export function createApiRouter(
 
   router.get("/users/:username", authed, users.getProfile);
   router.patch("/users/me", authed, users.updateMyProfile);
+  router.patch("/users/me/rooms/:roomNumber/preferences", authed, users.setRoomPreferences);
   router.get("/users/me/friends/:username", authed, users.getFriendship);
   router.put("/users/me/friends/:username", authed, users.addFriend);
   router.delete("/users/me/friends/:username", authed, users.removeFriend);
