@@ -17,6 +17,7 @@ interface ActivityRecord {
   room_number: number;
   room_name?: string | null;
   private_room?: boolean | null;
+  invite_only?: boolean | null;
   created_by: string;
   room_category?: string | null;
   first_message?: string | null;
@@ -55,6 +56,7 @@ function activityPipeline(
         room_number: 1,
         room_name: 1,
         private_room: 1,
+        invite_only: 1,
         created_by: 1,
         room_category: 1,
         first_message: 1,
@@ -95,6 +97,7 @@ function toDiscoverRoom(
     room_number: r.room_number,
     room_name: r.room_name ?? undefined,
     private_room: isPrivate,
+    ...(r.invite_only && { invite_only: true }),
     created_by: r.created_by,
     room_category: r.room_category ?? undefined,
     first_message: r.first_message ?? undefined,
@@ -145,7 +148,7 @@ export async function discoverRooms(
   query: { category?: DiscoverQuery["category"]; sort: DiscoverSort; q?: string | undefined },
   presence: Presence,
 ): Promise<DiscoverRoom[]> {
-  const match: Record<string, unknown> = {};
+  const match: Record<string, unknown> = { invite_only: { $ne: true } };
   if (query.category) match.room_category = query.category;
   if (query.q) match.room_name = { $regex: escapeRegex(query.q), $options: "i" };
   return runDiscovery(match, query.sort, DISCOVER_LIMIT, await loadViewer(username), presence);
@@ -174,6 +177,7 @@ export async function friendRooms(username: string, presence: Presence): Promise
   const rooms = await runDiscovery(
     {
       created_by: { $ne: username },
+      invite_only: { $ne: true },
       $or: [{ created_by: { $in: friends } }, { room_number: { $in: [...friendsByRoom.keys()] } }],
     },
     "active",
@@ -198,6 +202,8 @@ export async function peekRoom(
   if (!room) throw notFound("Room not found");
 
   const locked = room.private_room && room.membership === "none";
+  // Outsiders can't learn anything about an invite-only hub, even its name.
+  if (locked && room.invite_only) throw notFound("Room not found");
   if (locked) return { room, locked, messages: [] };
 
   const doc = await RoomModel.findOne({ room_number: roomNumber }, { messageHistory: 1 })

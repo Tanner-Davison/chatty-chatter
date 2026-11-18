@@ -35,6 +35,7 @@ export function toSummary(room: RoomRecord): RoomSummary {
     room_number: room.room_number,
     room_name: opt(room.room_name),
     private_room: Boolean(room.private_room),
+    ...(room.invite_only && { invite_only: true }),
     created_by: room.created_by,
     room_category: opt(room.room_category),
     first_message: opt(room.first_message),
@@ -92,7 +93,7 @@ export function toMessage(m: MessageRecord): ChatMessage {
 const findSummaries = (filter: Record<string, unknown>) =>
   RoomModel.find(filter).select("-messageHistory").lean<RoomRecord[]>();
 
-async function findRoomRecord(roomNumber: number): Promise<RoomRecord> {
+export async function findRoomRecord(roomNumber: number): Promise<RoomRecord> {
   const room = await RoomModel.findOne({ room_number: roomNumber })
     .select("-messageHistory")
     .lean<RoomRecord>();
@@ -105,12 +106,15 @@ export async function joinedRoomNumbers(username: string): Promise<number[]> {
   return (user?.roomsJoined ?? []).flatMap((r) => (r.room == null ? [] : [r.room]));
 }
 
-async function hasJoined(username: string, roomNumber: number): Promise<boolean> {
+export async function hasJoined(username: string, roomNumber: number): Promise<boolean> {
   return Boolean(await UserModel.exists({ username, "roomsJoined.room": roomNumber }));
 }
 
-/** Public rooms are open to everyone; private rooms to the creator and anyone who joined with the password. */
-async function canAccess(username: string, room: RoomRecord): Promise<boolean> {
+/**
+ * Public rooms are open to everyone; private rooms to the creator and anyone
+ * who joined with the password, an invite link, or was added by a member.
+ */
+export async function canAccess(username: string, room: RoomRecord): Promise<boolean> {
   if (!room.private_room || room.created_by === username) return true;
   return hasJoined(username, room.room_number);
 }
@@ -129,9 +133,17 @@ export async function getRoomWithHistory(username: string, roomNumber: number): 
   return { ...summary, messageHistory: (room?.messageHistory ?? []).map(toMessage) };
 }
 
-/** Basic details of any room, so the client can show a password prompt for a private one. */
-export async function getRoomSummary(roomNumber: number): Promise<RoomSummary> {
-  return toSummary(await findRoomRecord(roomNumber));
+/**
+ * Basic details of any room, so the client can show a password prompt for a
+ * private one. Outsiders only learn that an invite-only hub exists.
+ */
+export async function getRoomSummary(username: string, roomNumber: number): Promise<RoomSummary> {
+  const room = await findRoomRecord(roomNumber);
+  if (room.invite_only && !(await canAccess(username, room))) {
+    const { _id, room_number, private_room, invite_only, created_by } = toSummary(room);
+    return { _id, room_number, private_room, invite_only, created_by, users_in_room: [] };
+  }
+  return toSummary(room);
 }
 
 export async function isRoomNumberAvailable(roomNumber: number): Promise<boolean> {
@@ -141,6 +153,7 @@ export async function isRoomNumberAvailable(roomNumber: number): Promise<boolean
 export async function searchRooms(name: string): Promise<RoomSummary[]> {
   const rooms = await findSummaries({
     room_name: { $regex: `^${escapeRegex(name)}`, $options: "i" },
+    invite_only: { $ne: true },
   }).limit(SEARCH_LIMIT);
   return rooms.map(toSummary);
 }
@@ -150,6 +163,7 @@ interface ActivityRow {
   room_number: number;
   room_name?: string | null;
   private_room?: boolean | null;
+  invite_only?: boolean | null;
   created_by: string;
   room_category?: string | null;
   first_message?: string | null;
@@ -187,6 +201,7 @@ export async function getMyRooms(username: string): Promise<MyRooms> {
           room_number: 1,
           room_name: 1,
           private_room: 1,
+          invite_only: 1,
           created_by: 1,
           room_category: 1,
           first_message: 1,
@@ -255,7 +270,10 @@ export async function createRoom(username: string, input: CreateRoomInput): Prom
     room_number: input.roomNumber,
     room_name: input.name,
     private_room: input.isPrivate,
-    ...(input.isPrivate && { private_room_password: await hashPassword(input.password) }),
+    ...(input.isPrivate &&
+      (input.password
+        ? { private_room_password: await hashPassword(input.password) }
+        : { invite_only: true })),
     created_by: username,
     room_category: input.category,
     first_message: `Created! on ${date}.`,
@@ -297,25 +315,35 @@ export async function joinRoom(
     return toSummary(room);
   }
 
+  if (room.invite_only)
+    throw forbidden("This hub is invite-only. Ask a member for an invite link.");
   if (room.private_room) {
     if (!password) throw badRequest("This room needs a password");
     const matches = await bcrypt.compare(password, room.private_room_password ?? "");
     if (!matches) throw forbidden("Wrong room password");
   }
 
+  await addMembership(username, room);
+  return toSummary(room);
+}
+
+/** Subscribes the user to a room; does nothing if they already are. */
+export async function addMembership(
+  username: string,
+  room: Pick<RoomRecord, "room_number" | "room_name">,
+): Promise<void> {
   await UserModel.updateOne(
-    { username, "roomsJoined.room": { $ne: roomNumber } },
+    { username, "roomsJoined.room": { $ne: room.room_number } },
     {
       $push: {
         roomsJoined: {
-          room: roomNumber,
+          room: room.room_number,
           roomName: room.room_name,
           timestamp: new Date().toISOString(),
         },
       },
     },
   );
-  return toSummary(room);
 }
 
 export async function leaveRoom(username: string, roomNumber: number): Promise<void> {

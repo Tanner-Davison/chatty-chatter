@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { ArrowLeft, BellMinus, BellPlus, Crown, ImagePlus, Lock, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  BellMinus,
+  BellPlus,
+  Crown,
+  ImagePlus,
+  Lock,
+  Plus,
+  UserPlus,
+} from "lucide-react";
 import type { Room } from "@chatty/shared";
 import { Badge, Button, ConfirmDialog, LoadingBlock, Panel, StatusDot } from "../../components/ui";
 import { useCurrentUser } from "../auth/currentUser";
 import { useJoinRoom, useLeaveRoom, useMyRooms, useRoom } from "../rooms/api";
 import { ChatSettings } from "./ChatSettings";
+import { InviteSheet } from "./InviteSheet";
 import { Composer, type ComposerHandle } from "./Composer";
 import { messageAnchor } from "./anchors";
 import type { ChatEntry } from "./chatReducer";
@@ -99,6 +109,7 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
   const [dragging, setDragging] = useState(false);
   const isFileDrag = (e: React.DragEvent) => e.dataTransfer.types.includes("Files");
   const [confirmDelete, setConfirmDelete] = useState<ChatEntry | null>(null);
+  const [inviting, setInviting] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
   // Whether the view should stay pinned to the newest message. Scrolling up to
@@ -206,7 +217,7 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
             #{room.room_number}
             {room.private_room ? (
               <Badge tone="private">
-                <Lock /> Private
+                <Lock /> {room.invite_only ? "Invite only" : "Private"}
               </Badge>
             ) : (
               <Badge tone="public">Public</Badge>
@@ -215,6 +226,16 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
           </p>
         </div>
         <StatusDot online={connected && !joinError} label={joinError ?? undefined} />
+        {room.private_room && (
+          <Button
+            size="sm"
+            variant="private"
+            icon={<UserPlus className="size-4" />}
+            onClick={() => setInviting(true)}
+          >
+            <span className="hidden sm:inline">Invite</span>
+          </Button>
+        )}
         <SubscribeButton room={room} />
         <ChatSettings roomNumber={room.room_number} />
       </Panel>
@@ -289,6 +310,15 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
           disabled={!connected}
         />
       </div>
+
+      {room.private_room && (
+        <InviteSheet
+          room={room}
+          isOwner={room.created_by === user.username}
+          open={inviting}
+          onClose={() => setInviting(false)}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmDelete !== null}

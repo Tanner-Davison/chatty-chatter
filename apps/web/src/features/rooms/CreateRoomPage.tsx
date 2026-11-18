@@ -49,7 +49,7 @@ export function CreateRoomPage() {
         name,
         category: category || undefined,
         isPrivate,
-        ...(isPrivate && { password }),
+        ...(isPrivate && password && { password }),
       };
       // The schema allows no category (old hubs have none), but new hubs need one.
       const parsed = createRoomSchema.safeParse(draft);
@@ -80,7 +80,7 @@ export function CreateRoomPage() {
     >
       <h1 className="font-display text-3xl font-bold tracking-tight">Hub builder</h1>
       <p className="mt-1 text-sm text-fg-muted">
-        Start a public hub anyone can join, or a private one behind a password.
+        Start a public hub anyone can join, or a private one for the people you invite.
       </p>
 
       <div
@@ -171,10 +171,14 @@ export function CreateRoomPage() {
 
         {isPrivate && (
           <Field
-            label="Hub password"
+            label="Hub password (optional)"
             icon={<Lock className="size-3.5" />}
             error={errors.password}
-            hint="Share it with the people you want inside."
+            hint={
+              password
+                ? "People can join with this password or an invite link."
+                : "Leave blank for invite-only: people join with your invite link or when a member adds them, and the hub stays out of Explore."
+            }
           >
             {(props) => (
               <PasswordInput

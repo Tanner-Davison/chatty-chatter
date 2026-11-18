@@ -55,11 +55,12 @@ describe("POST /api/rooms", () => {
     expect(stored?.private_room_password).toMatch(/^\$2[ab]\$/);
   });
 
-  it("requires a password for private rooms", async () => {
-    await tanner
+  it("makes a private room without a password invite-only", async () => {
+    const res = await tanner
       .post("/api/rooms")
       .send({ roomNumber: 7, name: "Secret", isPrivate: true })
-      .expect(400);
+      .expect(201);
+    expect(res.body).toMatchObject({ private_room: true, invite_only: true });
   });
 
   it("rejects a taken room number with 409", async () => {

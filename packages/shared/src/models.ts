@@ -70,10 +70,17 @@ export interface RoomSummary {
   room_number: number;
   room_name?: string;
   private_room: boolean;
+  /** A private hub with no password: members join by invite link or by being added. */
+  invite_only?: boolean;
   created_by: string;
   room_category?: string;
   first_message?: string;
   users_in_room: string[];
+}
+
+/** A private hub's shareable invite; the link is `/invite/<code>`. */
+export interface RoomInvite {
+  code: string;
 }
 
 /** A room the current user may read, with its messages. */
@@ -160,8 +167,18 @@ export interface FriendAcceptedNotification extends NotificationBase {
   type: "friend_accepted";
 }
 
+/** Someone added you to a private hub. */
+export interface RoomAddedNotification extends NotificationBase {
+  type: "room_added";
+  room: number;
+  roomName?: string;
+}
+
 export type Notification =
-  MentionNotification | FriendRequestNotification | FriendAcceptedNotification;
+  | MentionNotification
+  | FriendRequestNotification
+  | FriendAcceptedNotification
+  | RoomAddedNotification;
 
 export interface NotificationList {
   notifications: Notification[];

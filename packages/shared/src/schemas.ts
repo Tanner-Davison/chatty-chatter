@@ -73,7 +73,8 @@ const roomBaseSchema = z.object({
 
 export const createRoomSchema = z.discriminatedUnion("isPrivate", [
   roomBaseSchema.extend({ isPrivate: z.literal(false) }),
-  roomBaseSchema.extend({ isPrivate: z.literal(true), password: roomPasswordSchema }),
+  // A private hub without a password is invite-only: people get in by link or by being added.
+  roomBaseSchema.extend({ isPrivate: z.literal(true), password: roomPasswordSchema.optional() }),
 ]);
 export type CreateRoomInput = z.infer<typeof createRoomSchema>;
 
@@ -81,6 +82,16 @@ export const joinRoomSchema = z.object({
   password: z.string().max(72).optional(),
 });
 export type JoinRoomInput = z.infer<typeof joinRoomSchema>;
+
+/** The random code in a hub's invite link. */
+export const inviteCodeSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{16,64}$/, "This invite link is invalid");
+
+export const inviteCodeParamsSchema = z.object({ code: inviteCodeSchema });
+
+export const addMemberSchema = z.object({ username: usernameSchema });
+export type AddMemberInput = z.infer<typeof addMemberSchema>;
 
 export const searchRoomsQuerySchema = z.object({
   name: z.string().trim().min(1).max(50),

@@ -11,6 +11,7 @@ import { ExplorePage } from "./features/explore/ExplorePage";
 import { NotificationsPage } from "./features/notifications/NotificationsPage";
 import { ProfilePage } from "./features/profile/ProfilePage";
 import { CreateRoomPage } from "./features/rooms/CreateRoomPage";
+import { InvitePage } from "./features/rooms/InvitePage";
 import { RoomsPage } from "./features/rooms/RoomsPage";
 import { isStatus } from "./lib/api";
 
@@ -49,6 +50,7 @@ const routes: RouteObject[] = [
           { path: "/chatroom/:room", element: <ChatPage /> },
           { path: "/profile/:username", element: <ProfilePage /> },
           { path: "/createroom/:room", element: <CreateRoomPage /> },
+          { path: "/invite/:code", element: <InvitePage /> },
         ],
       },
     ],

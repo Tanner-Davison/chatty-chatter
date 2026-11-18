@@ -25,7 +25,7 @@ export const checkAvailability: RequestHandler = async (req, res) => {
 };
 
 export const getRoomSummary: RequestHandler = async (req, res) => {
-  res.json(await roomService.getRoomSummary(roomNumberOf(req.params)));
+  res.json(await roomService.getRoomSummary(currentUser(req).username, roomNumberOf(req.params)));
 };
 
 /** The room with its messages; 403 for a private room the user hasn't joined. */

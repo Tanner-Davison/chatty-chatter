@@ -37,6 +37,17 @@ function describe(n: Notification) {
         detail: "You're now friends",
         href: `/profile/${n.sentBy}`,
       };
+    case "room_added":
+      return {
+        text: (
+          <>
+            <span className="text-fg-muted">added you to</span>{" "}
+            <span className="font-medium capitalize">{n.roomName ?? `Hub #${n.room}`}</span>
+          </>
+        ),
+        detail: "It's in your hubs now",
+        href: `/chatroom/${n.room}`,
+      };
   }
 }
 

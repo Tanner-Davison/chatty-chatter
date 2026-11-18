@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateRoomInput, MyRooms, Room, RoomSummary } from "@chatty/shared";
+import type { CreateRoomInput, MyRooms, Room, RoomInvite, RoomSummary } from "@chatty/shared";
 import { api, isStatus } from "../../lib/api";
 
 export const roomKeys = {
@@ -84,3 +84,35 @@ export const useLeaveRoom = () =>
 
 export const useDeleteRoom = () =>
   useRoomMutation((roomNumber: number) => api.delete<void>(`/rooms/${roomNumber}`));
+
+const inviteKey = (room: number) => ["invites", room] as const;
+
+/** A private hub's invite code, fetched when a member opens the invite panel. */
+export function useRoomInvite(roomNumber: number, enabled: boolean) {
+  return useQuery({
+    queryKey: inviteKey(roomNumber),
+    queryFn: () => api.get<RoomInvite>(`/rooms/${roomNumber}/invite`),
+    enabled,
+    staleTime: Infinity,
+  });
+}
+
+/** Swaps in a new invite code so old links stop working. */
+export function useResetInvite(roomNumber: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<RoomInvite>(`/rooms/${roomNumber}/invite/reset`),
+    onSuccess: (invite) => queryClient.setQueryData(inviteKey(roomNumber), invite),
+  });
+}
+
+export const useAcceptInvite = () =>
+  useRoomMutation((code: string) => api.post<RoomSummary>(`/invites/${encodeURIComponent(code)}`));
+
+export const useAddMember = (roomNumber: number) =>
+  useRoomMutation((username: string) =>
+    api.post<void>(`/rooms/${roomNumber}/members`, { username }),
+  );
+
+/** The link people open to join a hub. */
+export const inviteUrl = (code: string) => `${window.location.origin}/invite/${code}`;

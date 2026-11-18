@@ -27,6 +27,8 @@ export function toNotification(n: NotificationRecord): Notification {
       };
     case "friend_accepted":
       return { ...base, type: "friend_accepted" };
+    case "room_added":
+      return { ...base, type: "room_added", room: n.room ?? 0, roomName: n.roomName ?? undefined };
     default:
       return {
         ...base,

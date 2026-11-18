@@ -16,6 +16,7 @@ import { createAuthController } from "../controllers/auth.controller";
 import { createDiscoverController } from "../controllers/discover.controller";
 import { createLinkPreviewController } from "../controllers/link-preview.controller";
 import { createFriendController } from "../controllers/friend.controller";
+import { createInviteController } from "../controllers/invite.controller";
 import * as notifications from "../controllers/notification.controller";
 import * as rooms from "../controllers/room.controller";
 import * as users from "../controllers/user.controller";
@@ -37,6 +38,7 @@ export function createApiRouter(
   const auth = createAuthController(env, uploadImage, mailer);
   const discover = createDiscoverController(presence);
   const friends = createFriendController(notifier);
+  const invites = createInviteController(notifier);
   const authed = requireAuth(env);
   const router = Router();
 
@@ -86,6 +88,10 @@ export function createApiRouter(
   router.put("/rooms/:roomNumber/membership", authed, rooms.joinRoom);
   router.delete("/rooms/:roomNumber/membership", authed, rooms.leaveRoom);
   router.delete("/rooms/:roomNumber", authed, rooms.deleteRoom);
+  router.get("/rooms/:roomNumber/invite", authed, invites.getInvite);
+  router.post("/rooms/:roomNumber/invite/reset", authed, invites.resetInvite);
+  router.post("/rooms/:roomNumber/members", authed, invites.addMember);
+  router.post("/invites/:code", authed, authLimiter, invites.acceptInvite);
 
   router.get("/notifications", authed, notifications.listNotifications);
   router.post("/notifications/read", authed, notifications.markRead);

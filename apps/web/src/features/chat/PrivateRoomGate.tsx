@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Lock } from "lucide-react";
+import { Link2, Lock } from "lucide-react";
 import type { RoomSummary } from "@chatty/shared";
 import { Button, Field, Panel, PasswordInput } from "../../components/ui";
 import { useJoinRoom } from "../rooms/api";
@@ -13,6 +13,23 @@ export function PrivateRoomGate({ room }: { room: RoomSummary }) {
     e.preventDefault();
     if (password) join.mutate({ roomNumber: room.room_number, password });
   };
+
+  if (room.invite_only) {
+    return (
+      <Panel className="mx-auto mt-10 flex max-w-md flex-col items-center gap-5 p-8 text-center shadow-glow-private">
+        <span className="flex size-14 items-center justify-center rounded-2xl bg-private-soft text-private ring-1 ring-private/40">
+          <Link2 className="size-6" />
+        </span>
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Invite only</h1>
+          <p className="mt-1 text-sm text-fg-muted">
+            You need an invite to join this hub. Ask a member to send you its link or add you by
+            username.
+          </p>
+        </div>
+      </Panel>
+    );
+  }
 
   return (
     <Panel className="mx-auto mt-10 flex max-w-md flex-col items-center gap-5 p-8 text-center shadow-glow-private">

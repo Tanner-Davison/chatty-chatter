@@ -81,7 +81,7 @@ export function LoginPage() {
               onForgot={() => setMode("forgot")}
             />
           ) : (
-            <SignupForm onBack={() => setMode("welcome")} />
+            <SignupForm to={from} onBack={() => setMode("welcome")} />
           )}
         </Panel>
       )}
@@ -175,7 +175,7 @@ function LoginForm({
   );
 }
 
-function SignupForm({ onBack }: { onBack: () => void }) {
+function SignupForm({ to, onBack }: { to: string; onBack: () => void }) {
   const signup = useSignup();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -201,7 +201,7 @@ function SignupForm({ onBack }: { onBack: () => void }) {
         signup.mutate(
           { ...parsed.data, image },
           {
-            onSuccess: () => void navigate("/currentservers", { replace: true }),
+            onSuccess: () => void navigate(to, { replace: true }),
             onError: (err) =>
               setErrors(
                 err instanceof ApiRequestError && err.issues

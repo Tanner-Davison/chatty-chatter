@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import type { Notification, NotificationList } from "@chatty/shared";
 import { api } from "../../lib/api";
 import { useSocket } from "../chat/socketContext";
+import { roomKeys } from "../rooms/api";
 
 const ALL_LIMIT = 200;
 
@@ -45,12 +46,15 @@ export function useLiveNotifications() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const onNotification = (n: Notification) =>
+    const onNotification = (n: Notification) => {
       updateLists(queryClient, (list) => ({
         notifications: [n, ...list.notifications.filter((x) => x._id !== n._id)],
         unreadCount: list.unreadCount + 1,
         total: list.total + 1,
       }));
+      // Someone added you to a hub: show it in your list straight away.
+      if (n.type === "room_added") void queryClient.invalidateQueries({ queryKey: roomKeys.mine });
+    };
     const onChanged = () => void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     socket.on("notification", onNotification);
     socket.on("notifications_changed", onChanged);

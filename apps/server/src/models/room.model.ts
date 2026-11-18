@@ -26,6 +26,10 @@ const roomSchema = new Schema(
     room_name: String,
     private_room: { type: Boolean, default: false },
     private_room_password: { type: String, select: false },
+    // Private hubs without a password; they never appear in discovery.
+    invite_only: Boolean,
+    // The secret in the hub's invite link, made on first request.
+    invite_code: { type: String, select: false },
     created_by: { type: String, required: true },
     room_category: String,
     first_message: String,
@@ -37,11 +41,17 @@ const roomSchema = new Schema(
       versionKey: false,
       transform: (_doc, ret: Record<string, unknown>) => {
         delete ret.private_room_password;
+        delete ret.invite_code;
         ret.private_room = Boolean(ret.private_room);
         return ret;
       },
     },
   },
+);
+
+roomSchema.index(
+  { invite_code: 1 },
+  { unique: true, partialFilterExpression: { invite_code: { $type: "string" } } },
 );
 
 export type RoomFields = InferSchemaType<typeof roomSchema>;
