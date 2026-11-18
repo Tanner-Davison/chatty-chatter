@@ -14,6 +14,7 @@ import {
 import { isAllowedOrigin, type Env } from "../config/env";
 import { isOwnChatImage, unavailableImageStore, type ChatImageStore } from "../lib/cloudinary";
 import { HttpError } from "../lib/http-error";
+import type { Notifier } from "../lib/notifier";
 import type { Presence } from "../lib/presence";
 import { verifySocketToken } from "../lib/tokens";
 import * as messageService from "../services/message.service";
@@ -172,5 +173,14 @@ export function socketPresence(io: ChatServer): Presence {
       }
       return counts;
     },
+  };
+}
+
+/** Delivers notifications to every tab a user has open. */
+export function socketNotifier(io: ChatServer): Notifier {
+  return {
+    send: (recipient, notification) =>
+      io.to(userChannel(recipient)).emit("notification", notification),
+    changed: (recipient) => io.to(userChannel(recipient)).emit("notifications_changed"),
   };
 }

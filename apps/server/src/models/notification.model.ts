@@ -3,13 +3,18 @@ import { Schema, model, type InferSchemaType } from "mongoose";
 const notificationSchema = new Schema(
   {
     recipient: { type: String, required: true },
-    type: { type: String, enum: ["mention"], required: true },
-    room: { type: Number, required: true },
-    roomName: String,
-    messageId: { type: String, required: true },
+    type: { type: String, enum: ["mention", "friend_request", "friend_accepted"], required: true },
+    /** Who caused it. */
     sentBy: { type: String, required: true },
-    preview: { type: String, required: true },
     read: { type: Boolean, default: false },
+    // Mentions
+    room: Number,
+    roomName: String,
+    messageId: String,
+    preview: String,
+    // Friend requests
+    requestId: String,
+    requestStatus: { type: String, enum: ["pending", "accepted", "declined", "cancelled"] },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

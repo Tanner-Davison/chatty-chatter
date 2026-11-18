@@ -1,18 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link } from "react-router";
 import { AtSign, Bell, CheckCheck } from "lucide-react";
-import type { Notification } from "@chatty/shared";
-import { Avatar, Button, IconButton } from "../../components/ui";
+import { Button, IconButton } from "../../components/ui";
 import { cn } from "../../lib/cn";
-import { timeAgo } from "../../lib/format";
-import { useUserProfile } from "../profile/api";
 import { useLiveNotifications, useMarkRead, useNotifications } from "./api";
+import { NotificationItem } from "./NotificationItem";
+
+const DROPDOWN_LIMIT = 4;
 
 export function NotificationBell() {
   useLiveNotifications();
   const { data } = useNotifications();
   const markRead = useMarkRead();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const unread = data?.unreadCount ?? 0;
@@ -32,12 +31,6 @@ export function NotificationBell() {
       document.removeEventListener("keydown", close);
     };
   }, [open]);
-
-  const openNotification = (n: Notification) => {
-    setOpen(false);
-    if (!n.read) markRead.mutate([n._id]);
-    void navigate(`/chatroom/${n.room}?m=${n.messageId}`);
-  };
 
   return (
     <div ref={ref} className="relative">
@@ -81,53 +74,25 @@ export function NotificationBell() {
               When someone @mentions you, it shows up here.
             </div>
           ) : (
-            <ol className="max-h-[min(28rem,70dvh)] overflow-y-auto p-1">
-              {data.notifications.map((n) => (
-                <NotificationItem key={n._id} notification={n} onOpen={() => openNotification(n)} />
-              ))}
-            </ol>
+            <>
+              <ol className="flex flex-col gap-0.5 p-1">
+                {data.notifications.slice(0, DROPDOWN_LIMIT).map((n) => (
+                  <NotificationItem key={n._id} notification={n} onOpen={() => setOpen(false)} />
+                ))}
+              </ol>
+              {data.total > DROPDOWN_LIMIT && (
+                <Link
+                  to="/notifications"
+                  onClick={() => setOpen(false)}
+                  className="block border-t border-line px-4 py-2.5 text-center text-sm font-medium text-primary hover:bg-ink-700"
+                >
+                  View all ({data.total})
+                </Link>
+              )}
+            </>
           )}
         </div>
       )}
     </div>
-  );
-}
-
-function NotificationItem({
-  notification: n,
-  onOpen,
-}: {
-  notification: Notification;
-  onOpen: () => void;
-}) {
-  const { data: sender } = useUserProfile(n.sentBy);
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onOpen}
-        className={cn(
-          "flex w-full cursor-pointer gap-3 rounded-xl p-3 text-left transition hover:bg-ink-700",
-          !n.read && "bg-primary-soft/60",
-        )}
-      >
-        <Avatar src={sender?.profilePic?.url} name={n.sentBy} size="sm" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm">
-            <span className="font-semibold">@{n.sentBy}</span>{" "}
-            <span className="text-fg-muted">mentioned you in</span>{" "}
-            <span className="font-medium capitalize">{n.roomName ?? `Hub #${n.room}`}</span>
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-sm text-fg-muted">{n.preview}</p>
-          <p className="mt-1 text-xs text-fg-subtle">{timeAgo(n.createdAt)}</p>
-        </div>
-        {!n.read && (
-          <span
-            aria-label="Unread"
-            className="mt-1.5 size-2 shrink-0 rounded-full bg-primary shadow-glow-primary"
-          />
-        )}
-      </button>
-    </li>
   );
 }

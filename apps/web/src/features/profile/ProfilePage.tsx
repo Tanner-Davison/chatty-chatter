@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useParams } from "react-router";
-import { Briefcase, GraduationCap, Pencil, UserMinus, UserPlus, Users } from "lucide-react";
+import { Briefcase, GraduationCap, Pencil, Users } from "lucide-react";
 import type { User } from "@chatty/shared";
 import { Avatar, Button, LoadingBlock, Panel, PanelHeader } from "../../components/ui";
 import { isStatus } from "../../lib/api";
 import { useCurrentUser } from "../auth/currentUser";
-import { useFriendship, useSetFriend, useUserProfile } from "./api";
+import { useUserProfile } from "./api";
+import { FriendButton, FriendsList } from "./Friends";
 import { EditProfileForm } from "./EditProfileForm";
 
 export function ProfilePage() {
@@ -100,31 +101,7 @@ function ProfileDetails({ user, isMe }: { user: User; isMe: boolean }) {
             (isMe ? "You haven't written a bio yet. Edit your profile to add one." : "No bio yet.")}
         </p>
       </Panel>
+      {isMe && <FriendsList friends={user.friends} />}
     </>
-  );
-}
-
-function FriendButton({ username }: { username: string }) {
-  const { data } = useFriendship(username, true);
-  const setFriend = useSetFriend(username);
-  if (!data) return null;
-  return data.isFriend ? (
-    <Button
-      variant="danger"
-      icon={<UserMinus className="size-4" />}
-      loading={setFriend.isPending}
-      onClick={() => setFriend.mutate(false)}
-    >
-      Unfriend
-    </Button>
-  ) : (
-    <Button
-      variant="primary"
-      icon={<UserPlus className="size-4" />}
-      loading={setFriend.isPending}
-      onClick={() => setFriend.mutate(true)}
-    >
-      Add friend
-    </Button>
   );
 }

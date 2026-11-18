@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { createApp } from "./app";
 import { loadEnv } from "./config/env";
 import { createCloudinaryChatImages, createCloudinaryUploader } from "./lib/cloudinary";
-import { createSocketServer, socketPresence } from "./socket";
+import { createSocketServer, socketNotifier, socketPresence } from "./socket";
 
 const env = loadEnv();
 
@@ -17,6 +17,10 @@ const app = createApp({
   env,
   uploadImage: createCloudinaryUploader(env),
   chatImages,
+  notifier: {
+    send: (to, n) => socketNotifier(io).send(to, n),
+    changed: (to) => socketNotifier(io).changed(to),
+  },
   presence: { onlineCounts: (rooms) => socketPresence(io).onlineCounts(rooms) },
 });
 const server = createServer(app);

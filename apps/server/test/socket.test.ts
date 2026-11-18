@@ -6,7 +6,7 @@ import {
   MESSAGE_MAX_LENGTH,
   type ChatMessage,
   type ClientToServerEvents,
-  type Notification,
+  type MentionNotification,
   type ServerToClientEvents,
 } from "@chatty/shared";
 import request from "supertest";
@@ -176,7 +176,9 @@ describe("socketPresence", () => {
 
 describe("mentions", () => {
   const nextNotification = (socket: Client) =>
-    new Promise<Notification>((resolve) => socket.once("notification", resolve));
+    new Promise<MentionNotification>((resolve) =>
+      socket.once("notification", (n) => resolve(n as MentionNotification)),
+    );
 
   it("notifies mentioned users live, on every tab, and stores who was mentioned", async () => {
     await seedUser("cara");
@@ -244,7 +246,7 @@ describe("mentions", () => {
     const ben = await loginAs("ben");
     const list = await ben.get("/api/notifications").expect(200);
     expect(list.body.unreadCount).toBe(2);
-    expect(list.body.notifications.map((n: Notification) => n.preview)).toEqual([
+    expect(list.body.notifications.map((n: MentionNotification) => n.preview)).toEqual([
       "second @ben",
       "first @ben",
     ]);

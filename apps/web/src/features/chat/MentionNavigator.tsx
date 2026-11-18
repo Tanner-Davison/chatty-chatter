@@ -26,7 +26,7 @@ export function MentionNavigator({ room, messages, me, onJump }: MentionNavigato
   // Unseen = its notification is still unread.
   const unread = new Map(
     (data?.notifications ?? [])
-      .filter((n) => n.room === room && !n.read)
+      .flatMap((n) => (n.type === "mention" && n.room === room && !n.read ? [n] : []))
       .map((n) => [n.messageId, n._id]),
   );
   const unseen = mentions.filter((m) => unread.has(m.key)).length;

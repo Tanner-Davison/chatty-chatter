@@ -7,6 +7,7 @@ import { LoginPage } from "./features/auth/LoginPage";
 import { RequireAuth } from "./features/auth/RequireAuth";
 import { ChatPage } from "./features/chat/ChatPage";
 import { ExplorePage } from "./features/explore/ExplorePage";
+import { NotificationsPage } from "./features/notifications/NotificationsPage";
 import { ProfilePage } from "./features/profile/ProfilePage";
 import { CreateRoomPage } from "./features/rooms/CreateRoomPage";
 import { RoomsPage } from "./features/rooms/RoomsPage";
@@ -41,6 +42,7 @@ const routes: RouteObject[] = [
         children: [
           { path: "/currentservers", element: <RoomsPage /> },
           { path: "/explore", element: <ExplorePage /> },
+          { path: "/notifications", element: <NotificationsPage /> },
           { path: "/chatroom/:room", element: <ChatPage /> },
           { path: "/profile/:username", element: <ProfilePage /> },
           { path: "/createroom/:room", element: <CreateRoomPage /> },

@@ -117,23 +117,49 @@ export interface RoomPeek {
   messages: ChatMessage[];
 }
 
-export interface Notification {
+interface NotificationBase {
   _id: string;
-  type: "mention";
-  room: number;
-  roomName?: string;
-  messageId: string;
+  /** Who caused it: the mentioner, the requester, or who accepted. */
   sentBy: string;
-  /** The start of the message. */
-  preview: string;
   read: boolean;
   createdAt: string;
 }
 
+export interface MentionNotification extends NotificationBase {
+  type: "mention";
+  room: number;
+  roomName?: string;
+  messageId: string;
+  /** The start of the message. */
+  preview: string;
+}
+
+export type FriendRequestStatus = "pending" | "accepted" | "declined" | "cancelled";
+
+export interface FriendRequestNotification extends NotificationBase {
+  type: "friend_request";
+  requestId: string;
+  requestStatus: FriendRequestStatus;
+}
+
+export interface FriendAcceptedNotification extends NotificationBase {
+  type: "friend_accepted";
+}
+
+export type Notification =
+  MentionNotification | FriendRequestNotification | FriendAcceptedNotification;
+
 export interface NotificationList {
   notifications: Notification[];
   unreadCount: number;
+  /** All the user's notifications, including ones not in this page. */
+  total: number;
 }
+
+/** How the viewer relates to another user. */
+export type Friendship =
+  | { status: "self" | "friends" | "none" }
+  | { status: "request_sent" | "request_received"; requestId: string };
 
 /** What a link unfurls to. Every field is optional because pages vary. */
 export interface LinkPreview {

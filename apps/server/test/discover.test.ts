@@ -158,8 +158,7 @@ describe("GET /api/rooms/discover/friends", () => {
       { username: "cara" },
       { $push: { roomsJoined: [{ room: 2 }, { room: 4 }] } },
     );
-    await tanner.put("/api/users/me/friends/ben").expect(200);
-    await tanner.put("/api/users/me/friends/cara").expect(200);
+    await UserModel.updateOne({ username: "tanner" }, { $set: { friends: ["ben", "cara"] } });
 
     const { body } = await tanner.get("/api/rooms/discover/friends").expect(200);
     const here = Object.fromEntries(

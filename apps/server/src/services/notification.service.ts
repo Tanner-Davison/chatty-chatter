@@ -9,18 +9,33 @@ const PREVIEW_LENGTH = 140;
 
 type NotificationRecord = NotificationFields & { _id: Types.ObjectId; createdAt: Date };
 
-function toNotification(n: NotificationRecord): Notification {
-  return {
+export function toNotification(n: NotificationRecord): Notification {
+  const base = {
     _id: n._id.toString(),
-    type: n.type,
-    room: n.room,
-    roomName: n.roomName ?? undefined,
-    messageId: n.messageId,
     sentBy: n.sentBy,
-    preview: n.preview,
     read: n.read ?? false,
     createdAt: n.createdAt.toISOString(),
   };
+  switch (n.type) {
+    case "friend_request":
+      return {
+        ...base,
+        type: "friend_request",
+        requestId: n.requestId ?? "",
+        requestStatus: n.requestStatus ?? "pending",
+      };
+    case "friend_accepted":
+      return { ...base, type: "friend_accepted" };
+    default:
+      return {
+        ...base,
+        type: "mention",
+        room: n.room ?? 0,
+        roomName: n.roomName ?? undefined,
+        messageId: n.messageId ?? "",
+        preview: n.preview ?? "",
+      };
+  }
 }
 
 /**
@@ -78,15 +93,19 @@ export async function notifyMentions(
   }));
 }
 
-export async function listNotifications(username: string): Promise<NotificationList> {
-  const [docs, unreadCount] = await Promise.all([
+export async function listNotifications(
+  username: string,
+  limit = LIST_LIMIT,
+): Promise<NotificationList> {
+  const [docs, unreadCount, total] = await Promise.all([
     NotificationModel.find({ recipient: username })
       .sort({ createdAt: -1 })
-      .limit(LIST_LIMIT)
+      .limit(limit)
       .lean<NotificationRecord[]>(),
     NotificationModel.countDocuments({ recipient: username, read: false }),
+    NotificationModel.countDocuments({ recipient: username }),
   ]);
-  return { notifications: docs.map(toNotification), unreadCount };
+  return { notifications: docs.map(toNotification), unreadCount, total };
 }
 
 /** Marks the given notifications (or all of them) read. Only touches the user's own. */
@@ -102,4 +121,20 @@ export async function removeForMessage(messageId: string): Promise<string[]> {
   const recipients: string[] = await NotificationModel.distinct("recipient", { messageId });
   if (recipients.length > 0) await NotificationModel.deleteMany({ messageId });
   return recipients;
+}
+
+/** Deletes one of the user's notifications (or, with no id, all of them). */
+export async function deleteNotifications(username: string, id?: string): Promise<void> {
+  await NotificationModel.deleteMany({ recipient: username, ...(id && { _id: id }) });
+}
+
+export async function createNotification(
+  fields: Partial<NotificationFields> & {
+    recipient: string;
+    type: NotificationFields["type"];
+    sentBy: string;
+  },
+): Promise<Notification> {
+  const doc = await NotificationModel.create(fields);
+  return toNotification(doc.toObject() as NotificationRecord);
 }
