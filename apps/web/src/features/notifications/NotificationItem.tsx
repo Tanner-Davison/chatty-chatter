@@ -78,7 +78,16 @@ export function NotificationItem({
         onClick={open}
         className="flex min-w-0 flex-1 cursor-pointer gap-3 text-left"
       >
-        <Avatar src={sender?.profilePic?.url} name={n.sentBy} size="sm" />
+        {/* Unread dot sits on the avatar so it never overlaps the text. */}
+        <span className="relative shrink-0">
+          <Avatar src={sender?.profilePic?.url} name={n.sentBy} size="sm" />
+          {!n.read && (
+            <span
+              aria-label="Unread"
+              className="absolute -top-1 -right-1 size-2.5 rounded-full bg-primary shadow-glow-primary ring-2 ring-surface-overlay"
+            />
+          )}
+        </span>
         <div className="min-w-0 flex-1 pr-6">
           <p className="text-sm">
             <span className="font-semibold">@{n.sentBy}</span> {text}
@@ -102,6 +111,7 @@ export function NotificationItem({
           <Button
             size="sm"
             variant="ghost"
+            className="hover:bg-danger-soft hover:text-danger"
             disabled={friend.isPending}
             onClick={() => answer("decline")}
           >
@@ -110,12 +120,6 @@ export function NotificationItem({
         </div>
       )}
 
-      {!n.read && !pendingRequest && (
-        <span
-          aria-label="Unread"
-          className="absolute top-4 right-9 size-2 rounded-full bg-primary shadow-glow-primary"
-        />
-      )}
       <button
         type="button"
         onClick={() => remove.mutate(n._id)}

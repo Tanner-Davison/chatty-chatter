@@ -7,7 +7,9 @@ import type { ReceivedColor, SentColor } from "@chatty/shared";
 export const SENT_BUBBLES: Record<SentColor, { label: string; bubble: string; mention: string }> = {
   cyan: {
     label: "Cyan",
-    bubble: "bg-gradient-to-br from-primary to-primary-strong text-primary-fg shadow-glow-primary",
+    // Spelled out (not the primary token) so your messages stay cyan by default.
+    bubble:
+      "bg-gradient-to-br from-cyan-400 to-cyan-500 text-cyan-950 shadow-[0_0_24px_-4px_rgb(34_211_238/0.45)]",
     mention: "text-blue-900",
   },
   sky: {

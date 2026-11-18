@@ -19,7 +19,8 @@ export type RoomKind = "subscribed" | "public" | "private";
 
 // Each section's tile takes its role colour.
 const TILE_COLORS: Record<RoomKind, string> = {
-  subscribed: "var(--color-primary)",
+  // Cyan so subscribed tiles stay distinct from your green public ones.
+  subscribed: "#22d3ee",
   public: "var(--color-public)",
   private: "var(--color-private)",
 };

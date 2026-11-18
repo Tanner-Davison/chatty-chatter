@@ -50,6 +50,7 @@ export function FriendButton({ username }: { username: string }) {
           </Button>
           <Button
             variant="ghost"
+            className="hover:bg-danger-soft hover:text-danger"
             icon={<X className="size-4" />}
             disabled={busy}
             onClick={() => act.mutate({ kind: "decline", username, requestId: data.requestId })}
