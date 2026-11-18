@@ -38,6 +38,14 @@ export interface User {
  * rewrite. Older messages hold whatever the old client formatted, such as
  * "11/26 12:44 am", so display code must fall back to the raw string.
  */
+/** A photo in a message, hosted in the app's Cloudinary folder. */
+export interface Attachment {
+  url: string;
+  cloudinary_id: string;
+  width?: number;
+  height?: number;
+}
+
 export interface ChatMessage {
   _id?: string;
   message: string;
@@ -45,6 +53,8 @@ export interface ChatMessage {
   timestamp: string;
   imageUrl?: string;
   cloudinary_id?: string;
+  /** Photos sent with the message. */
+  attachments?: Attachment[];
   /** Usernames this message notified. */
   mentions?: string[];
   /** The sender removed the link preview for everyone. */
@@ -68,9 +78,20 @@ export interface Room extends RoomSummary {
   messageHistory: ChatMessage[];
 }
 
+/** One of your hubs, with what's happened since you last looked. */
+export interface MyRoom extends RoomSummary {
+  /** ISO time of the newest message (or of creation). */
+  lastActiveAt: string;
+  /** Messages from other people since you last had the hub open. */
+  unreadCount: number;
+  /** Unread notifications for mentions of you in this hub. */
+  unreadMentions: number;
+  lastMessage?: { message: string; sentBy: string };
+}
+
 export interface MyRooms {
-  created: RoomSummary[];
-  joined: RoomSummary[];
+  created: MyRoom[];
+  joined: MyRoom[];
 }
 
 export interface ApiError {
@@ -107,23 +128,49 @@ export interface RoomPeek {
   messages: ChatMessage[];
 }
 
-export interface Notification {
+interface NotificationBase {
   _id: string;
-  type: "mention";
-  room: number;
-  roomName?: string;
-  messageId: string;
+  /** Who caused it: the mentioner, the requester, or who accepted. */
   sentBy: string;
-  /** The start of the message. */
-  preview: string;
   read: boolean;
   createdAt: string;
 }
 
+export interface MentionNotification extends NotificationBase {
+  type: "mention";
+  room: number;
+  roomName?: string;
+  messageId: string;
+  /** The start of the message. */
+  preview: string;
+}
+
+export type FriendRequestStatus = "pending" | "accepted" | "declined" | "cancelled";
+
+export interface FriendRequestNotification extends NotificationBase {
+  type: "friend_request";
+  requestId: string;
+  requestStatus: FriendRequestStatus;
+}
+
+export interface FriendAcceptedNotification extends NotificationBase {
+  type: "friend_accepted";
+}
+
+export type Notification =
+  MentionNotification | FriendRequestNotification | FriendAcceptedNotification;
+
 export interface NotificationList {
   notifications: Notification[];
   unreadCount: number;
+  /** All the user's notifications, including ones not in this page. */
+  total: number;
 }
+
+/** How the viewer relates to another user. */
+export type Friendship =
+  | { status: "self" | "friends" | "none" }
+  | { status: "request_sent" | "request_received"; requestId: string };
 
 /** What a link unfurls to. Every field is optional because pages vary. */
 export interface LinkPreview {

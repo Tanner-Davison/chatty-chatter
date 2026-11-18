@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import type { ChatMessage } from "@chatty/shared";
+import { useQueryClient } from "@tanstack/react-query";
+import type { Attachment, ChatMessage } from "@chatty/shared";
 import { chatReducer, type ChatEntry } from "./chatReducer";
+import { roomKeys } from "../rooms/api";
 import { useSocket } from "./socketContext";
 
 const TYPING_SHOWN_MS = 4000;
@@ -18,6 +20,7 @@ export function useChatRoom(
   onReconnect: () => void,
 ) {
   const { socket, connected } = useSocket();
+  const queryClient = useQueryClient();
   const [messages, dispatch] = useReducer(chatReducer, []);
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -34,8 +37,11 @@ export function useChatRoom(
     wasConnected.current = true;
     return () => {
       socket.emit("leave_room", { room });
+      // Leaving marks the hub seen on the server; refresh the dashboard's
+      // unread counts once that has landed.
+      setTimeout(() => void queryClient.invalidateQueries({ queryKey: roomKeys.mine }), 400);
     };
-  }, [socket, connected, room, onReconnect]);
+  }, [socket, connected, room, onReconnect, queryClient]);
 
   useEffect(() => {
     if (!connected) wasConnected.current = false;
@@ -80,10 +86,11 @@ export function useChatRoom(
   }, [socket, room]);
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, attachments: Attachment[] = []) => {
       const tempId = `temp-${crypto.randomUUID()}`;
-      dispatch({ type: "sending", tempId, sentBy: username, text });
-      socket.timeout(10_000).emit("send_message", { room, message: text }, (err, res) => {
+      dispatch({ type: "sending", tempId, sentBy: username, text, attachments });
+      const payload = { room, message: text, ...(attachments.length > 0 && { attachments }) };
+      socket.timeout(10_000).emit("send_message", payload, (err, res) => {
         if (err || !res.ok) dispatch({ type: "failed", tempId });
         else dispatch({ type: "sent", tempId, message: res.data });
       });

@@ -6,7 +6,7 @@ import {
   MESSAGE_MAX_LENGTH,
   type ChatMessage,
   type ClientToServerEvents,
-  type Notification,
+  type MentionNotification,
   type ServerToClientEvents,
 } from "@chatty/shared";
 import request from "supertest";
@@ -24,10 +24,24 @@ let httpServer: HttpServer;
 let io: ChatServer;
 let url: string;
 const clients: Client[] = [];
+const removedPhotos: string[] = [];
+const fakeImages = {
+  upload: async () => ({ url: "", cloudinary_id: "" }),
+  remove: async (ids: string[]) => {
+    removedPhotos.push(...ids);
+  },
+};
+const photo = (id: string) => ({
+  url: `https://res.cloudinary.com/dezclgtpg/image/upload/v1/chat_images/${id}.png`,
+  cloudinary_id: `chat_images/${id}`,
+  width: 800,
+  height: 600,
+});
 
 beforeEach(async () => {
   httpServer = createServer(app);
-  io = createSocketServer(env, httpServer);
+  removedPhotos.length = 0;
+  io = createSocketServer(env, httpServer, fakeImages);
   await new Promise<void>((resolve) => httpServer.listen(0, resolve));
   url = `http://localhost:${(httpServer.address() as AddressInfo).port}`;
   await Promise.all([seedUser("tanner"), seedUser("ben")]);
@@ -162,7 +176,9 @@ describe("socketPresence", () => {
 
 describe("mentions", () => {
   const nextNotification = (socket: Client) =>
-    new Promise<Notification>((resolve) => socket.once("notification", resolve));
+    new Promise<MentionNotification>((resolve) =>
+      socket.once("notification", (n) => resolve(n as MentionNotification)),
+    );
 
   it("notifies mentioned users live, on every tab, and stores who was mentioned", async () => {
     await seedUser("cara");
@@ -230,7 +246,7 @@ describe("mentions", () => {
     const ben = await loginAs("ben");
     const list = await ben.get("/api/notifications").expect(200);
     expect(list.body.unreadCount).toBe(2);
-    expect(list.body.notifications.map((n: Notification) => n.preview)).toEqual([
+    expect(list.body.notifications.map((n: MentionNotification) => n.preview)).toEqual([
       "second @ben",
       "first @ben",
     ]);
@@ -331,5 +347,117 @@ describe("delete_message", () => {
       error: "This room is private",
     });
     expect((await remove(tanner, 1, "not-an-id")).ok).toBe(false);
+  });
+});
+
+describe("photo messages", () => {
+  const sendPhotos = (socket: Client, room: number, message: string, attachments: unknown[]) =>
+    new Promise<AckResponse<ChatMessage>>((resolve) =>
+      socket.emit("send_message", { room, message, attachments } as never, resolve),
+    );
+
+  it("sends photos with or without text, and refuses outside images", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await Promise.all([join(tanner, 1), join(ben, 1)]);
+
+    const received = new Promise<{ message: ChatMessage }>((resolve) =>
+      ben.once("receive_message", resolve),
+    );
+    const ack = await sendPhotos(tanner, 1, "", [photo("a"), photo("b")]);
+    expect(ack.ok && ack.data.attachments).toEqual([photo("a"), photo("b")]);
+    expect((await received).message.attachments).toHaveLength(2);
+
+    const outside = { ...photo("x"), url: "https://evil.example/pixel.png" };
+    expect(await sendPhotos(tanner, 1, "hi", [outside])).toEqual({
+      ok: false,
+      error: "Photos must be uploaded through Chatty Chatter",
+    });
+    const otherFolder = {
+      url: "https://res.cloudinary.com/dezclgtpg/image/upload/v1/profile_photos/me.png",
+      cloudinary_id: "profile_photos/me",
+    };
+    expect((await sendPhotos(tanner, 1, "hi", [otherFolder])).ok).toBe(false);
+    expect((await sendPhotos(tanner, 1, "", [])).ok).toBe(false);
+    expect(
+      (
+        await sendPhotos(
+          tanner,
+          1,
+          "",
+          Array.from({ length: 5 }, (_, i) => photo(`p${i}`)),
+        )
+      ).ok,
+    ).toBe(false);
+
+    const history = (await (await loginAs("ben")).get("/api/rooms/1")).body.messageHistory;
+    expect(history.at(-1).attachments).toEqual([photo("a"), photo("b")]);
+    const discover = (await (await loginAs("ben")).get("/api/rooms/discover")).body;
+    expect(discover[0].lastMessage).toEqual({ message: "📷 Photo", sentBy: "tanner" });
+  });
+
+  it("removes a deleted message's photos from storage", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tanner = await connected("tanner");
+    await join(tanner, 1);
+    const ack = await sendPhotos(tanner, 1, "look", [photo("c")]);
+    const messageId = ack.ok ? ack.data._id! : "";
+    await new Promise((resolve) => tanner.emit("delete_message", { room: 1, messageId }, resolve));
+    expect(removedPhotos).toEqual(["chat_images/c"]);
+  });
+});
+
+describe("hub activity on the dashboard", () => {
+  const mine = async (agent: Awaited<ReturnType<typeof loginAs>>, room: number) => {
+    const { body } = await agent.get("/api/rooms/mine").expect(200);
+    return [...body.created, ...body.joined].find(
+      (r: { room_number: number }) => r.room_number === room,
+    );
+  };
+  const leave = (socket: Client, room: number) =>
+    new Promise<void>((resolve) => {
+      socket.emit("leave_room", { room });
+      setTimeout(resolve, 50);
+    });
+
+  it("counts messages from others since you last had the hub open, plus unread mentions", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tannerHttp = await loginAs("tanner");
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await join(ben, 1);
+    await send(ben, 1, "before tanner ever looked");
+    // Never opened since tracking started: nothing counts as new.
+    expect(await mine(tannerHttp, 1)).toMatchObject({ unreadCount: 0, unreadMentions: 0 });
+
+    await join(tanner, 1);
+    await leave(tanner, 1);
+    await send(ben, 1, "one");
+    await send(ben, 1, "two for @tanner");
+    await send(ben, 1, "three");
+    const room = await mine(tannerHttp, 1);
+    expect(room).toMatchObject({
+      unreadCount: 3,
+      unreadMentions: 1,
+      lastMessage: { message: "three", sentBy: "ben" },
+    });
+    expect(Date.now() - new Date(room.lastActiveAt).getTime()).toBeLessThan(5000);
+
+    // Your own messages never count, and opening the hub clears the count.
+    await join(tanner, 1);
+    await send(tanner, 1, "mine");
+    expect((await mine(tannerHttp, 1)).unreadCount).toBe(0);
+  });
+
+  it("closing the tab counts as having seen the hub", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tannerHttp = await loginAs("tanner");
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await Promise.all([join(tanner, 1), join(ben, 1)]);
+    await send(ben, 1, "hello");
+    tanner.disconnect();
+    await new Promise((r) => setTimeout(r, 100));
+    expect((await mine(tannerHttp, 1)).unreadCount).toBe(0);
+    await send(ben, 1, "after you left");
+    expect((await mine(tannerHttp, 1)).unreadCount).toBe(1);
   });
 });

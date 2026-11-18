@@ -1,25 +1,54 @@
 import {
+  useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
+  type ClipboardEvent,
   type FormEvent,
   type KeyboardEvent,
   type ReactNode,
+  type Ref,
 } from "react";
-import { Bold, Code, Italic, SendHorizontal, SquareCode, Strikethrough } from "lucide-react";
-import { MESSAGE_MAX_LENGTH, splitMentions } from "@chatty/shared";
-import { Avatar, Button } from "../../components/ui";
+import {
+  AlertCircle,
+  Bold,
+  Code,
+  Italic,
+  Paperclip,
+  SendHorizontal,
+  SquareCode,
+  Strikethrough,
+  X,
+} from "lucide-react";
+import { IMAGE_TYPES, MESSAGE_MAX_LENGTH, splitMentions, type Attachment } from "@chatty/shared";
+import { Avatar, Button, Spinner } from "../../components/ui";
 import { cn } from "../../lib/cn";
+import { acceptImages, uploadChatImage } from "../../lib/images";
 import { useUserProfile } from "../profile/api";
 import { insertCodeBlock, insideOpenFence, toggleWrap, type Edit } from "./editorFormat";
 import { findMentionQuery, insertMention, rankMentions } from "./mentionAutocomplete";
 
+/** Lets the chat page hand over files dropped anywhere on it. */
+export interface ComposerHandle {
+  addFiles: (files: File[]) => void;
+}
+
 interface ComposerProps {
-  onSend: (text: string) => void;
+  onSend: (text: string, attachments: Attachment[]) => void;
   onTyping: () => void;
   /** People who can be @mentioned in this room. */
   mentionables: string[];
   disabled?: boolean;
+  ref?: Ref<ComposerHandle>;
+}
+
+/** A photo waiting to be sent: uploading, ready, or failed. */
+interface PendingPhoto {
+  id: string;
+  preview: string;
+  status: "uploading" | "ready" | "failed";
+  attachment?: Attachment;
 }
 
 const MAX_HEIGHT_PX = 260;
@@ -31,8 +60,50 @@ const mod = isMac ? "⌘" : "Ctrl+";
  * and @mention suggestions. Enter sends; Shift+Enter (or Enter inside an open
  * ``` block) starts a new line.
  */
-export function Composer({ onSend, onTyping, mentionables, disabled }: ComposerProps) {
+export function Composer({ onSend, onTyping, mentionables, disabled, ref }: ComposerProps) {
   const [text, setText] = useState("");
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
+  const [photoProblem, setPhotoProblem] = useState<string>();
+  const filePicker = useRef<HTMLInputElement>(null);
+  const uploading = photos.some((p) => p.status === "uploading");
+  const ready = photos.flatMap((p) => (p.status === "ready" && p.attachment ? [p.attachment] : []));
+
+  // Photos upload as soon as they're added, so sending is instant.
+  const addFiles = (files: File[]) => {
+    const { accepted, problem } = acceptImages(files, photos.length);
+    setPhotoProblem(problem);
+    for (const file of accepted) {
+      const id = crypto.randomUUID();
+      setPhotos((all) => [...all, { id, preview: URL.createObjectURL(file), status: "uploading" }]);
+      uploadChatImage(file).then(
+        (attachment) =>
+          setPhotos((all) =>
+            all.map((p) => (p.id === id ? { ...p, status: "ready", attachment } : p)),
+          ),
+        () => setPhotos((all) => all.map((p) => (p.id === id ? { ...p, status: "failed" } : p))),
+      );
+    }
+  };
+  useImperativeHandle(ref, () => ({ addFiles }));
+
+  const removePhoto = (id: string) =>
+    setPhotos((all) => {
+      const gone = all.find((p) => p.id === id);
+      if (gone) URL.revokeObjectURL(gone.preview);
+      return all.filter((p) => p.id !== id);
+    });
+
+  // Free the local previews when leaving the hub.
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
+  useEffect(() => () => photosRef.current.forEach((p) => URL.revokeObjectURL(p.preview)), []);
+
+  const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = [...e.clipboardData.files];
+    if (files.length === 0) return;
+    e.preventDefault();
+    addFiles(files);
+  };
   const [caret, setCaret] = useState(0);
   const [active, setActive] = useState(0);
   const [dismissedAt, setDismissedAt] = useState<number | null>(null);
@@ -155,10 +226,13 @@ export function Composer({ onSend, onTyping, mentionables, disabled }: ComposerP
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!trimmed || disabled || open) return;
-    onSend(trimmed);
+    if ((!trimmed && ready.length === 0) || uploading || disabled || open) return;
+    onSend(trimmed, ready);
     setText("");
     setCaret(0);
+    photos.forEach((p) => URL.revokeObjectURL(p.preview));
+    setPhotos([]);
+    setPhotoProblem(undefined);
   };
 
   const tools: {
@@ -215,10 +289,66 @@ export function Composer({ onSend, onTyping, mentionables, disabled }: ComposerP
               {t.icon}
             </button>
           ))}
+          <span aria-hidden className="mx-1 h-4 w-px bg-line" />
+          <button
+            type="button"
+            aria-label="Add photos (or paste / drop them)"
+            title="Add photos (or paste / drop them)"
+            onClick={() => filePicker.current?.click()}
+            className="flex size-7 cursor-pointer items-center justify-center rounded-md text-fg-subtle hover:bg-ink-800 hover:text-fg [&_svg]:size-4"
+          >
+            <Paperclip />
+          </button>
+          <input
+            ref={filePicker}
+            type="file"
+            accept={IMAGE_TYPES.join(",")}
+            multiple
+            hidden
+            onChange={(e) => {
+              addFiles([...(e.target.files ?? [])]);
+              e.target.value = "";
+            }}
+          />
           <span className="ml-auto hidden pr-1.5 text-[11px] text-fg-subtle sm:block">
             <kbd className="font-sans">Shift+Enter</kbd> for a new line
           </span>
         </div>
+
+        {(photos.length > 0 || photoProblem) && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2">
+            {photos.map((p) => (
+              <div
+                key={p.id}
+                className="group/photo relative size-16 overflow-hidden rounded-lg ring-1 ring-line-strong"
+              >
+                <img src={p.preview} alt="" className="size-full object-cover" />
+                {p.status === "uploading" && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-ink-950/60">
+                    <Spinner className="size-5 text-primary" />
+                  </span>
+                )}
+                {p.status === "failed" && (
+                  <span
+                    title="Upload failed"
+                    className="absolute inset-0 flex items-center justify-center bg-danger/30 text-danger"
+                  >
+                    <AlertCircle className="size-5" />
+                  </span>
+                )}
+                <button
+                  type="button"
+                  aria-label="Remove photo"
+                  onClick={() => removePhoto(p.id)}
+                  className="absolute top-1 right-1 flex size-5 cursor-pointer items-center justify-center rounded-full bg-ink-950/80 text-fg opacity-80 hover:opacity-100"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+            {photoProblem && <p className="text-xs text-warning">{photoProblem}</p>}
+          </div>
+        )}
 
         <div className="relative">
           {/* The textarea's own text is transparent; this mirror behind it draws
@@ -250,6 +380,7 @@ export function Composer({ onSend, onTyping, mentionables, disabled }: ComposerP
             onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
             onScroll={syncMirror}
             onKeyDown={onKeyDown}
+            onPaste={onPaste}
             role="combobox"
             aria-expanded={open}
             aria-controls="mention-suggestions"
@@ -267,7 +398,7 @@ export function Composer({ onSend, onTyping, mentionables, disabled }: ComposerP
         type="submit"
         variant="primary"
         size="lg"
-        disabled={!trimmed || disabled}
+        disabled={(!trimmed && ready.length === 0) || uploading || disabled}
         icon={<SendHorizontal className="size-4" />}
       >
         <span className="hidden sm:inline">Send</span>

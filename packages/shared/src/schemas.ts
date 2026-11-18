@@ -83,15 +83,25 @@ export const MESSAGE_MAX_LENGTH = 4000;
 export const roomEventSchema = z.object({ room: roomNumberSchema });
 export type RoomEventPayload = z.infer<typeof roomEventSchema>;
 
+export const MAX_ATTACHMENTS = 4;
+export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
+
+export const attachmentSchema = z.object({
+  url: z.url({ protocol: /^https$/ }).max(500),
+  cloudinary_id: z.string().min(1).max(200),
+  width: z.number().int().positive().max(20_000).optional(),
+  height: z.number().int().positive().max(20_000).optional(),
+});
+
 export const sendMessageSchema = z
   .object({
     room: roomNumberSchema,
     message: z.string().trim().max(MESSAGE_MAX_LENGTH).default(""),
-    imageUrl: z.url({ protocol: /^https$/ }).optional(),
-    cloudinary_id: z.string().max(200).optional(),
+    attachments: z.array(attachmentSchema).max(MAX_ATTACHMENTS).optional(),
   })
-  .refine((m) => m.message.length > 0 || m.imageUrl, {
-    message: "A message needs text or an image",
+  .refine((m) => m.message.length > 0 || (m.attachments?.length ?? 0) > 0, {
+    message: "A message needs text or a photo",
   });
 export type SendMessageInput = z.input<typeof sendMessageSchema>;
 

@@ -9,6 +9,7 @@ import type { ChatEntry } from "./chatReducer";
 import { messageAnchor } from "./anchors";
 import { LinkPreviewCard } from "./LinkPreviewCard";
 import { MessageContent } from "./MessageContent";
+import { PhotoGrid } from "./PhotoGrid";
 
 interface MessageBubbleProps {
   message: ChatEntry;
@@ -76,22 +77,34 @@ export function MessageBubble({
         >
           <div
             className={cn(
-              "flex max-w-full min-w-0 flex-col gap-1 rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
-              isOwn ? "rounded-tr-md" : "rounded-tl-md",
-              bubbleClass,
-              // Like Slack: messages that mention you stand out.
-              mentionsMe && "ring-2 ring-warning/70",
+              "flex max-w-full min-w-0 flex-col gap-1.5",
+              isOwn && "items-end",
               message.status === "pending" && "opacity-60",
-              message.status === "failed" &&
-                "bg-none bg-danger-soft text-danger ring-1 ring-danger/50 shadow-none",
             )}
           >
-            <MessageContent
-              text={message.message}
-              isOwn={isOwn}
-              me={me}
-              ownMentionClass={ownMentionClass}
-            />
+            {message.message && (
+              <div
+                className={cn(
+                  "flex max-w-full min-w-0 flex-col gap-1 rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
+                  isOwn ? "rounded-tr-md" : "rounded-tl-md",
+                  bubbleClass,
+                  // Like Slack: messages that mention you stand out.
+                  mentionsMe && "ring-2 ring-warning/70",
+                  message.status === "failed" &&
+                    "bg-none bg-danger-soft text-danger ring-1 ring-danger/50 shadow-none",
+                )}
+              >
+                <MessageContent
+                  text={message.message}
+                  isOwn={isOwn}
+                  me={me}
+                  ownMentionClass={ownMentionClass}
+                />
+              </div>
+            )}
+            {message.attachments && message.attachments.length > 0 && (
+              <PhotoGrid photos={message.attachments} alignEnd={isOwn} />
+            )}
           </div>
           {onDelete && (
             // Slack-style hover toolbar beside the bubble; also shows on keyboard focus.

@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UpdateProfileInput, User } from "@chatty/shared";
+import type { Friendship, UpdateProfileInput, User } from "@chatty/shared";
 import { api } from "../../lib/api";
 import { meQueryKey } from "../auth/api";
+import { notificationKeys } from "../notifications/api";
 
 export const userKeys = {
   profile: (username: string) => ["users", username] as const,
@@ -33,24 +34,41 @@ export function useUpdateProfile() {
 export function useFriendship(username: string, enabled: boolean) {
   return useQuery({
     queryKey: userKeys.friendship(username),
-    queryFn: () =>
-      api.get<{ isFriend: boolean }>(`/users/me/friends/${encodeURIComponent(username)}`),
+    queryFn: () => api.get<Friendship>(`/users/me/friends/${encodeURIComponent(username)}`),
     enabled,
   });
 }
 
-export function useSetFriend(username: string) {
+export type FriendAction =
+  | { kind: "request" | "remove"; username: string }
+  | { kind: "accept" | "decline" | "cancel"; username: string; requestId: string };
+
+/**
+ * Every friend change: send/cancel a request, accept/decline one, or remove a
+ * friend. Refreshes the friendship, both profiles and notifications.
+ */
+export function useFriendAction() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (friend: boolean) => {
-      const path = `/users/me/friends/${encodeURIComponent(username)}`;
-      return friend
-        ? api.put<{ isFriend: boolean }>(path)
-        : api.delete<{ isFriend: boolean }>(path);
+    mutationFn: (action: FriendAction) => {
+      const user = `/users/me/friends/${encodeURIComponent(action.username)}`;
+      switch (action.kind) {
+        case "request":
+          return api.post<Friendship>(user);
+        case "remove":
+          return api.delete<Friendship>(user);
+        case "accept":
+        case "decline":
+          return api.post<Friendship>(`/friend-requests/${action.requestId}/${action.kind}`);
+        case "cancel":
+          return api.delete<Friendship>(`/friend-requests/${action.requestId}`);
+      }
     },
-    onSuccess: (result) => {
-      queryClient.setQueryData(userKeys.friendship(username), result);
+    onSuccess: (friendship, action) => {
+      queryClient.setQueryData(userKeys.friendship(action.username), friendship);
       void queryClient.invalidateQueries({ queryKey: meQueryKey });
+      void queryClient.invalidateQueries({ queryKey: userKeys.profile(action.username) });
+      void queryClient.invalidateQueries({ queryKey: notificationKeys.all });
     },
   });
 }

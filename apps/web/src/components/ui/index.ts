@@ -4,6 +4,7 @@ export { Badge, StatusDot, type BadgeTone } from "./Badge";
 export { Button, IconButton } from "./Button";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { Field, Input, PasswordInput, Select, Textarea } from "./Field";
+export { Lightbox } from "./Lightbox";
 export { Logo } from "./Logo";
 export { Menu, type MenuItem } from "./Menu";
 export { Panel, PanelHeader } from "./Panel";

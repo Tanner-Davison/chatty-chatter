@@ -22,6 +22,8 @@ const userSchema = new Schema(
     ],
     friends: [String],
     // Chat colours per hub, keyed by room number.
+    // When the user last had each hub open, keyed by room number.
+    lastSeen: { type: Map, of: Date, default: undefined },
     roomPreferences: {
       type: Map,
       of: new Schema({ sentColor: String, receivedColor: String }, { _id: false }),

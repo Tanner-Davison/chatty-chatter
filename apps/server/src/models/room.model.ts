@@ -6,6 +6,15 @@ const messageSchema = new Schema({
   timestamp: String,
   imageUrl: String,
   cloudinary_id: String,
+  attachments: {
+    type: [
+      new Schema(
+        { url: String, cloudinary_id: String, width: Number, height: Number },
+        { _id: false },
+      ),
+    ],
+    default: undefined,
+  },
   mentions: { type: [String], default: undefined },
   linkPreviewHidden: Boolean,
 });

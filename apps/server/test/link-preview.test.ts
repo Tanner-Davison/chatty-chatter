@@ -189,3 +189,51 @@ describe("oEmbed providers", () => {
     );
   });
 });
+
+describe("POST /api/uploads/images", () => {
+  const uploadApp = createApp({
+    env,
+    uploadImage: async () => uploadedPic,
+    chatImages: {
+      upload: async (file) => ({
+        url: `https://res.cloudinary.com/dezclgtpg/image/upload/v1/chat_images/${file.originalname}`,
+        cloudinary_id: "chat_images/x",
+        width: 10,
+        height: 10,
+      }),
+      remove: async () => {},
+    },
+  });
+
+  it("uploads images for chat and rejects other files", async () => {
+    await seedUser("tanner");
+    const agent = request.agent(uploadApp);
+    await agent
+      .post("/api/auth/login")
+      .send({ username: "tanner", password: "password123" })
+      .expect(200);
+    for (const [name, type] of [
+      ["a.gif", "image/gif"],
+      ["b.webp", "image/webp"],
+      ["c.jpg", "image/jpeg"],
+    ]) {
+      const res = await agent
+        .post("/api/uploads/images")
+        .attach("image", Buffer.from("x"), { filename: name, contentType: type })
+        .expect(201);
+      expect(res.body.cloudinary_id).toBe("chat_images/x");
+    }
+    await agent
+      .post("/api/uploads/images")
+      .attach("image", Buffer.from("x"), { filename: "x.svg", contentType: "image/svg+xml" })
+      .expect(400);
+    await agent.post("/api/uploads/images").expect(400);
+  });
+
+  it("needs a session", async () => {
+    await request(uploadApp)
+      .post("/api/uploads/images")
+      .attach("image", Buffer.from("x"), { filename: "a.png", contentType: "image/png" })
+      .expect(401);
+  });
+});

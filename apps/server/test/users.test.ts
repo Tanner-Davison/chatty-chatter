@@ -43,24 +43,6 @@ describe("profiles", () => {
   });
 });
 
-describe("friends", () => {
-  it("adds, checks and removes a friend", async () => {
-    await tanner.get("/api/users/me/friends/ben").expect(200, { isFriend: false });
-    await tanner.put("/api/users/me/friends/ben").expect(200, { isFriend: true });
-    await tanner.put("/api/users/me/friends/ben").expect(200, { isFriend: true });
-    await tanner.get("/api/users/me/friends/ben").expect(200, { isFriend: true });
-    expect((await UserModel.findOne({ username: "tanner" }))?.friends).toEqual(["ben"]);
-
-    await tanner.delete("/api/users/me/friends/ben").expect(200, { isFriend: false });
-    expect((await UserModel.findOne({ username: "tanner" }))?.friends).toEqual([]);
-  });
-
-  it("can't befriend yourself or someone who doesn't exist", async () => {
-    await tanner.put("/api/users/me/friends/tanner").expect(400);
-    await tanner.put("/api/users/me/friends/ghost").expect(404);
-  });
-});
-
 describe("PATCH /api/users/me/rooms/:roomNumber/preferences", () => {
   it("saves, updates and resets colours per hub", async () => {
     const set = await tanner

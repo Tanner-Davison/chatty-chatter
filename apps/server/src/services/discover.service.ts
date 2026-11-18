@@ -23,7 +23,7 @@ interface ActivityRecord {
   messageCount: number;
   recentMessageCount: number;
   memberCount: number;
-  last?: { message?: string | null; sentBy?: string | null } | null;
+  last?: { message?: string | null; sentBy?: string | null; attachments?: unknown[] | null } | null;
   lastActiveAt: Date;
   createdAt: Date;
 }
@@ -105,7 +105,12 @@ function toDiscoverRoom(
     onlineCount: online.get(r.room_number) ?? 0,
     // Private rooms never reveal what's said inside.
     ...(!isPrivate &&
-      r.last && { lastMessage: { message: r.last.message ?? "", sentBy: r.last.sentBy ?? "" } }),
+      r.last && {
+        lastMessage: {
+          message: r.last.message || (r.last.attachments?.length ? "📷 Photo" : ""),
+          sentBy: r.last.sentBy ?? "",
+        },
+      }),
     memberPreview: members.slice(-4).reverse(),
     membership:
       r.created_by === viewer.username

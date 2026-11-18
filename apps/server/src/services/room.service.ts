@@ -4,6 +4,7 @@ import type { z } from "zod";
 import type {
   ChatMessage,
   CreateRoomInput,
+  MyRoom,
   MyRooms,
   Room,
   RoomSummary,
@@ -11,6 +12,7 @@ import type {
 } from "@chatty/shared";
 import { badRequest, conflict, forbidden, notFound } from "../lib/http-error";
 import { RoomModel, type RoomFields } from "../models/room.model";
+import { NotificationModel } from "../models/notification.model";
 import { UserModel } from "../models/user.model";
 import { hashPassword } from "./auth.service";
 
@@ -46,6 +48,14 @@ interface MessageRecord {
   timestamp?: string | null;
   imageUrl?: string | null;
   cloudinary_id?: string | null;
+  attachments?:
+    | {
+        url?: string | null;
+        cloudinary_id?: string | null;
+        width?: number | null;
+        height?: number | null;
+      }[]
+    | null;
   mentions?: string[] | null;
   linkPreviewHidden?: boolean | null;
 }
@@ -58,6 +68,20 @@ export function toMessage(m: MessageRecord): ChatMessage {
     timestamp: m.timestamp ?? "",
     imageUrl: opt(m.imageUrl),
     cloudinary_id: opt(m.cloudinary_id),
+    ...(m.attachments?.length && {
+      attachments: m.attachments.flatMap((a) =>
+        a.url && a.cloudinary_id
+          ? [
+              {
+                url: a.url,
+                cloudinary_id: a.cloudinary_id,
+                width: opt(a.width),
+                height: opt(a.height),
+              },
+            ]
+          : [],
+      ),
+    }),
     ...(m.mentions?.length && { mentions: m.mentions }),
     ...(m.linkPreviewHidden && { linkPreviewHidden: true }),
   };
@@ -120,13 +144,104 @@ export async function searchRooms(name: string): Promise<RoomSummary[]> {
   return rooms.map(toSummary);
 }
 
+interface ActivityRow {
+  _id: Types.ObjectId;
+  room_number: number;
+  room_name?: string | null;
+  private_room?: boolean | null;
+  created_by: string;
+  room_category?: string | null;
+  first_message?: string | null;
+  users_in_room?: string[] | null;
+  history: { _id?: Types.ObjectId; sentBy?: string | null; timestamp?: string | null }[];
+  last?: {
+    _id?: Types.ObjectId;
+    message?: string | null;
+    sentBy?: string | null;
+    attachments?: unknown[] | null;
+  } | null;
+}
+
+/**
+ * The user's hubs with activity: unread messages since they last had each one
+ * open, unread mentions, and the latest message. A hub they've never opened
+ * since this was tracked counts as fully read, so old history isn't "new".
+ */
 export async function getMyRooms(username: string): Promise<MyRooms> {
-  const joinedNumbers = await joinedRoomNumbers(username);
-  const [created, joined] = await Promise.all([
-    findSummaries({ created_by: username }),
-    findSummaries({ room_number: { $in: joinedNumbers }, created_by: { $ne: username } }),
+  const user = await UserModel.findOne({ username }, { roomsJoined: 1, lastSeen: 1 }).lean();
+  const joinedNumbers = (user?.roomsJoined ?? []).flatMap((r) => (r.room == null ? [] : [r.room]));
+  const lastSeen = user?.lastSeen as Record<string, Date> | Map<string, Date> | undefined;
+  const seenAt = (room: number) =>
+    lastSeen instanceof Map ? lastSeen.get(String(room)) : lastSeen?.[String(room)];
+
+  const [rows, mentionCounts] = await Promise.all([
+    RoomModel.aggregate<ActivityRow>([
+      {
+        $match: {
+          $or: [{ created_by: username }, { room_number: { $in: joinedNumbers } }],
+        },
+      },
+      {
+        $project: {
+          room_number: 1,
+          room_name: 1,
+          private_room: 1,
+          created_by: 1,
+          room_category: 1,
+          first_message: 1,
+          users_in_room: 1,
+          history: {
+            $map: {
+              input: { $ifNull: ["$messageHistory", []] },
+              in: { _id: "$$this._id", sentBy: "$$this.sentBy", timestamp: "$$this.timestamp" },
+            },
+          },
+          last: { $last: "$messageHistory" },
+        },
+      },
+    ]),
+    NotificationModel.aggregate<{ _id: number; count: number }>([
+      { $match: { recipient: username, type: "mention", read: false } },
+      { $group: { _id: "$room", count: { $sum: 1 } } },
+    ]),
   ]);
-  return { created: created.map(toSummary), joined: joined.map(toSummary) };
+  const mentions = new Map(mentionCounts.map((m) => [m._id, m.count]));
+
+  // New messages have exact ISO timestamps; old ones only the second-level time in their id.
+  const sentAt = (m: ActivityRow["history"][number]) =>
+    m.timestamp && /^\d{4}-\d{2}-\d{2}T/.test(m.timestamp)
+      ? new Date(m.timestamp)
+      : (m._id?.getTimestamp() ?? new Date(0));
+
+  const toMyRoom = (row: ActivityRow): MyRoom => {
+    const seen = seenAt(row.room_number);
+    const unreadCount = seen
+      ? row.history.filter((m) => m.sentBy !== username && sentAt(m) > seen).length
+      : 0;
+    return {
+      ...toSummary(row as unknown as RoomRecord),
+      lastActiveAt: (row.last?._id?.getTimestamp() ?? row._id.getTimestamp()).toISOString(),
+      unreadCount,
+      unreadMentions: mentions.get(row.room_number) ?? 0,
+      ...(row.last && {
+        lastMessage: {
+          message: row.last.message || (row.last.attachments?.length ? "📷 Photo" : ""),
+          sentBy: row.last.sentBy ?? "",
+        },
+      }),
+    };
+  };
+
+  const all = rows.map(toMyRoom);
+  return {
+    created: all.filter((r) => r.created_by === username),
+    joined: all.filter((r) => r.created_by !== username),
+  };
+}
+
+/** Records that the user has seen everything in a hub up to now. */
+export async function markSeen(username: string, roomNumber: number): Promise<void> {
+  await UserModel.updateOne({ username }, { $set: { [`lastSeen.${roomNumber}`]: new Date() } });
 }
 
 export async function createRoom(username: string, input: CreateRoomInput): Promise<RoomSummary> {
@@ -242,8 +357,7 @@ export async function addMessage(
     message: input.message,
     sentBy: username,
     timestamp: new Date().toISOString(),
-    ...(input.imageUrl && { imageUrl: input.imageUrl }),
-    ...(input.cloudinary_id && { cloudinary_id: input.cloudinary_id }),
+    ...(input.attachments?.length && { attachments: input.attachments }),
     ...(mentions.length > 0 && { mentions }),
   };
   const result = await RoomModel.updateOne(
@@ -275,11 +389,16 @@ export async function deleteMessage(
   username: string,
   roomNumber: number,
   messageId: string,
-): Promise<void> {
+): Promise<string[]> {
   const _id = new Types.ObjectId(messageId);
-  const result = await RoomModel.updateOne(
+  const before = await RoomModel.findOneAndUpdate(
     { room_number: roomNumber, messageHistory: { $elemMatch: { _id, sentBy: username } } },
     { $pull: { messageHistory: { _id } } },
+    { projection: { messageHistory: { $elemMatch: { _id } } } },
+  ).lean();
+  if (!before) throw forbidden("You can only delete your own messages");
+  // The deleted message's photos, so the caller can remove them from Cloudinary.
+  return (before.messageHistory?.[0]?.attachments ?? []).flatMap((a) =>
+    a.cloudinary_id ? [a.cloudinary_id] : [],
   );
-  if (result.matchedCount === 0) throw forbidden("You can only delete your own messages");
 }

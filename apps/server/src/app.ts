@@ -3,8 +3,9 @@ import cors from "cors";
 import express, { type Express } from "express";
 import helmet from "helmet";
 import { isAllowedOrigin, type Env } from "./config/env";
-import type { ImageUploader } from "./lib/cloudinary";
+import { unavailableImageStore, type ChatImageStore, type ImageUploader } from "./lib/cloudinary";
 import { createLinkPreviewer, type LinkPreviewer } from "./lib/link-preview";
+import { noNotifier, type Notifier } from "./lib/notifier";
 import { noPresence, type Presence } from "./lib/presence";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { createApiRouter } from "./routes";
@@ -16,6 +17,10 @@ export interface AppDeps {
   presence?: Presence;
   /** Fetches link previews; tests pass a fake. */
   linkPreviewer?: LinkPreviewer;
+  /** Stores photos sent in chat; tests pass a fake. */
+  chatImages?: ChatImageStore;
+  /** Pushes notifications to people's open tabs. */
+  notifier?: Notifier;
 }
 
 /** Builds the Express app without listening, so tests can drive it with supertest. */
@@ -24,6 +29,8 @@ export function createApp({
   uploadImage,
   presence = noPresence,
   linkPreviewer = createLinkPreviewer(),
+  chatImages = unavailableImageStore,
+  notifier = noNotifier,
 }: AppDeps): Express {
   const app = express();
 
@@ -44,7 +51,10 @@ export function createApp({
   app.get("/", (_req, res) => {
     res.json({ message: "Chatty Chatter API is running" });
   });
-  app.use("/api", createApiRouter(env, { uploadImage, presence, linkPreviewer }));
+  app.use(
+    "/api",
+    createApiRouter(env, { uploadImage, presence, linkPreviewer, chatImages, notifier }),
+  );
 
   app.use(notFoundHandler);
   app.use(errorHandler);

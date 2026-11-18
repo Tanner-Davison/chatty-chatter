@@ -22,23 +22,6 @@ export const updateMyProfile: RequestHandler = async (req, res) => {
   res.json(await userService.updateProfile(currentUser(req).username, changes));
 };
 
-export const getFriendship: RequestHandler = async (req, res) => {
-  const { username: friend } = parse(usernameParamsSchema, req.params);
-  res.json({ isFriend: await userService.isFriend(currentUser(req).username, friend) });
-};
-
-export const addFriend: RequestHandler = async (req, res) => {
-  const { username: friend } = parse(usernameParamsSchema, req.params);
-  await userService.addFriend(currentUser(req).username, friend);
-  res.json({ isFriend: true });
-};
-
-export const removeFriend: RequestHandler = async (req, res) => {
-  const { username: friend } = parse(usernameParamsSchema, req.params);
-  await userService.removeFriend(currentUser(req).username, friend);
-  res.json({ isFriend: false });
-};
-
 export const setRoomPreferences: RequestHandler = async (req, res) => {
   const { roomNumber } = parse(roomNumberParamsSchema, req.params);
   const changes = parse(roomPreferencesSchema, req.body ?? {});

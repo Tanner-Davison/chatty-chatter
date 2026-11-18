@@ -13,8 +13,15 @@ export const roomKeys = {
   search: (name: string) => ["rooms", "search", name] as const,
 };
 
+/** Your hubs with their activity; kept fresh so new messages show up on the dashboard. */
 export function useMyRooms() {
-  return useQuery({ queryKey: roomKeys.mine, queryFn: () => api.get<MyRooms>("/rooms/mine") });
+  return useQuery({
+    queryKey: roomKeys.mine,
+    queryFn: () => api.get<MyRooms>("/rooms/mine"),
+    staleTime: 0,
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useRoomSearch(name: string) {
