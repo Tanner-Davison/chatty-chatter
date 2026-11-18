@@ -1,30 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Check, Globe, Hash, Lock, Search, Shapes, Type } from "lucide-react";
-import { createRoomSchema, type CreateRoomInput } from "@chatty/shared";
+import { createRoomSchema, ROOM_CATEGORIES, type CreateRoomInput } from "@chatty/shared";
 import { Badge, Button, Field, Input, Panel, PasswordInput, Select } from "../../components/ui";
 import { ApiRequestError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import { isRoomNumberAvailable, useCreateRoom } from "./api";
-
-const CATEGORIES = [
-  "General",
-  "Discussions",
-  "Technology",
-  "Entertainment",
-  "Gaming",
-  "Sports",
-  "Books and Literature",
-  "Travel",
-  "Food and Cooking",
-  "Health and Fitness",
-  "Art and Creativity",
-  "Science and Nature",
-  "Politics and News",
-  "Education",
-  "Parenting",
-  "Music and Instruments",
-] as const;
 
 type Errors = Partial<Record<"roomNumber" | "name" | "category" | "password" | "_", string>>;
 
@@ -181,7 +162,7 @@ export function CreateRoomPage() {
           {(props) => (
             <Select {...props} value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="">Select a category</option>
-              {CATEGORIES.map((c) => (
+              {ROOM_CATEGORIES.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </Select>

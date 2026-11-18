@@ -2,13 +2,16 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import type { Env } from "../config/env";
 import { imageUpload, type ImageUploader } from "../lib/cloudinary";
+import type { Presence } from "../lib/presence";
 import { createAuthController } from "../controllers/auth.controller";
+import { createDiscoverController } from "../controllers/discover.controller";
 import * as rooms from "../controllers/room.controller";
 import * as users from "../controllers/user.controller";
 import { requireAuth } from "../middleware/auth";
 
-export function createApiRouter(env: Env, uploadImage: ImageUploader): Router {
+export function createApiRouter(env: Env, uploadImage: ImageUploader, presence: Presence): Router {
   const auth = createAuthController(env, uploadImage);
+  const discover = createDiscoverController(presence);
   const authed = requireAuth(env);
   const router = Router();
 
@@ -37,10 +40,12 @@ export function createApiRouter(env: Env, uploadImage: ImageUploader): Router {
   router.delete("/users/me/friends/:username", authed, users.removeFriend);
 
   router.get("/rooms/mine", authed, rooms.getMyRooms);
-  router.get("/rooms/explore", authed, rooms.getExploreRooms);
+  router.get("/rooms/discover", authed, discover.discover);
+  router.get("/rooms/discover/friends", authed, discover.friends);
   router.get("/rooms/search", authed, rooms.searchRooms);
   router.get("/rooms/:roomNumber/availability", authed, rooms.checkAvailability);
   router.get("/rooms/:roomNumber/summary", authed, rooms.getRoomSummary);
+  router.get("/rooms/:roomNumber/peek", authed, discover.peek);
   router.get("/rooms/:roomNumber", authed, rooms.getRoom);
   router.post("/rooms", authed, rooms.createRoom);
   router.put("/rooms/:roomNumber/membership", authed, rooms.joinRoom);

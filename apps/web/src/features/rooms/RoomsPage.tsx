@@ -3,7 +3,8 @@ import { MessagesSquare, Plus } from "lucide-react";
 import type { RoomSummary } from "@chatty/shared";
 import { Button, LoadingBlock } from "../../components/ui";
 import { useCurrentUser } from "../auth/currentUser";
-import { useDeleteRoom, useExploreRooms, useLeaveRoom, useMyRooms } from "./api";
+import { DiscoverTeaser } from "../explore/DiscoverTeaser";
+import { useDeleteRoom, useLeaveRoom, useMyRooms } from "./api";
 import { RoomGrid } from "./RoomGrid";
 
 /** The community hub everyone lands in. */
@@ -13,7 +14,6 @@ export function RoomsPage() {
   const user = useCurrentUser();
   const navigate = useNavigate();
   const mine = useMyRooms();
-  const explore = useExploreRooms();
   const leave = useLeaveRoom();
   const remove = useDeleteRoom();
 
@@ -88,16 +88,7 @@ export function RoomsPage() {
         </>
       )}
 
-      {explore.isPending ? (
-        <LoadingBlock label="Finding hubs to explore" />
-      ) : (
-        <RoomGrid
-          title="Explore hubs"
-          kind="explore"
-          rooms={explore.data ?? []}
-          emptyText="You've seen every hub. Why not start a new one?"
-        />
-      )}
+      <DiscoverTeaser />
     </div>
   );
 }

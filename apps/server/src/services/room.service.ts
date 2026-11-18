@@ -21,7 +21,7 @@ const SEARCH_LIMIT = 20;
 type RoomRecord = Omit<RoomFields, "messageHistory"> & { _id: Types.ObjectId };
 type NewMessage = z.output<typeof sendMessageSchema>;
 
-const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // Mongo stores missing optional strings as null; the API omits them.
 const opt = <T>(value: T | null | undefined): T | undefined => value ?? undefined;
@@ -48,7 +48,7 @@ interface MessageRecord {
   cloudinary_id?: string | null;
 }
 
-function toMessage(m: MessageRecord): ChatMessage {
+export function toMessage(m: MessageRecord): ChatMessage {
   return {
     _id: m._id?.toString(),
     message: m.message ?? "",
@@ -71,7 +71,7 @@ async function findRoomRecord(roomNumber: number): Promise<RoomRecord> {
   return room;
 }
 
-async function joinedRoomNumbers(username: string): Promise<number[]> {
+export async function joinedRoomNumbers(username: string): Promise<number[]> {
   const user = await UserModel.findOne({ username }, { roomsJoined: 1 }).lean();
   return (user?.roomsJoined ?? []).flatMap((r) => (r.room == null ? [] : [r.room]));
 }
@@ -123,16 +123,6 @@ export async function getMyRooms(username: string): Promise<MyRooms> {
     findSummaries({ room_number: { $in: joinedNumbers }, created_by: { $ne: username } }),
   ]);
   return { created: created.map(toSummary), joined: joined.map(toSummary) };
-}
-
-/** Rooms the user neither created nor joined, newest first. */
-export async function getExploreRooms(username: string): Promise<RoomSummary[]> {
-  const joinedNumbers = await joinedRoomNumbers(username);
-  const rooms = await findSummaries({
-    created_by: { $ne: username },
-    room_number: { $nin: joinedNumbers },
-  }).sort({ _id: -1 });
-  return rooms.map(toSummary);
 }
 
 export async function createRoom(username: string, input: CreateRoomInput): Promise<RoomSummary> {

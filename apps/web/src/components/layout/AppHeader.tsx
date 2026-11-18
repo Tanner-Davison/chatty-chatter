@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router";
-import { LayoutGrid, LogOut, Menu as MenuIcon, PlusSquare, UserRound, X } from "lucide-react";
+import {
+  Compass,
+  LayoutGrid,
+  LogOut,
+  Menu as MenuIcon,
+  PlusSquare,
+  UserRound,
+  X,
+} from "lucide-react";
 import { useLogout } from "../../features/auth/api";
 import { useCurrentUser } from "../../features/auth/currentUser";
 import { HubFinder } from "../../features/rooms/HubFinder";
@@ -16,6 +24,7 @@ export function AppHeader() {
   const links = [
     { to: `/profile/${user.username}`, label: "Profile", icon: <UserRound /> },
     { to: "/currentservers", label: "Chat-Hubs", icon: <LayoutGrid /> },
+    { to: "/explore", label: "Explore", icon: <Compass /> },
     { to: "/createroom/0", label: "Add-Hub", icon: <PlusSquare />, match: "/createroom" },
   ];
 

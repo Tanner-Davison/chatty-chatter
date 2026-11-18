@@ -5,7 +5,9 @@ import { api, isStatus } from "../../lib/api";
 export const roomKeys = {
   all: ["rooms"] as const,
   mine: ["rooms", "mine"] as const,
-  explore: ["rooms", "explore"] as const,
+  discover: (params: string) => ["rooms", "discover", params] as const,
+  friends: ["rooms", "discover", "friends"] as const,
+  peek: (room: number) => ["rooms", "peek", room] as const,
   detail: (room: number) => ["rooms", "detail", room] as const,
   summary: (room: number) => ["rooms", "summary", room] as const,
   search: (name: string) => ["rooms", "search", name] as const,
@@ -13,13 +15,6 @@ export const roomKeys = {
 
 export function useMyRooms() {
   return useQuery({ queryKey: roomKeys.mine, queryFn: () => api.get<MyRooms>("/rooms/mine") });
-}
-
-export function useExploreRooms() {
-  return useQuery({
-    queryKey: roomKeys.explore,
-    queryFn: () => api.get<RoomSummary[]>("/rooms/explore"),
-  });
 }
 
 export function useRoomSearch(name: string) {

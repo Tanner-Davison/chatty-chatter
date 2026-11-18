@@ -92,3 +92,33 @@ export const sendMessageSchema = z
     message: "A message needs text or an image",
   });
 export type SendMessageInput = z.input<typeof sendMessageSchema>;
+
+export const ROOM_CATEGORIES = [
+  "General",
+  "Discussions",
+  "Technology",
+  "Entertainment",
+  "Gaming",
+  "Sports",
+  "Books and Literature",
+  "Travel",
+  "Food and Cooking",
+  "Health and Fitness",
+  "Art and Creativity",
+  "Science and Nature",
+  "Politics and News",
+  "Education",
+  "Parenting",
+  "Music and Instruments",
+] as const;
+export type RoomCategory = (typeof ROOM_CATEGORIES)[number];
+
+export const DISCOVER_SORTS = ["trending", "active", "members", "newest"] as const;
+export type DiscoverSort = (typeof DISCOVER_SORTS)[number];
+
+export const discoverQuerySchema = z.object({
+  category: z.enum(ROOM_CATEGORIES).optional(),
+  sort: z.enum(DISCOVER_SORTS).default("trending"),
+  q: z.string().trim().max(50).optional(),
+});
+export type DiscoverQuery = z.input<typeof discoverQuerySchema>;

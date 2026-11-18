@@ -11,6 +11,7 @@ import {
 } from "@chatty/shared";
 import { isAllowedOrigin, type Env } from "../config/env";
 import { HttpError } from "../lib/http-error";
+import type { Presence } from "../lib/presence";
 import { verifySocketToken } from "../lib/tokens";
 import * as roomService from "../services/room.service";
 
@@ -105,4 +106,24 @@ export function createSocketServer(env: Env, httpServer: HttpServer): ChatServer
 
   io.on("connection", registerHandlers);
   return io;
+}
+
+/** Counts distinct users (not tabs) with each room open, from the live socket rooms. */
+export function socketPresence(io: ChatServer): Presence {
+  return {
+    onlineCounts(rooms) {
+      const counts = new Map<number, number>();
+      for (const room of rooms) {
+        const ids = io.sockets.adapter.rooms.get(channel(room));
+        if (!ids) continue;
+        const users = new Set<string>();
+        for (const id of ids) {
+          const username = io.sockets.sockets.get(id)?.data.username;
+          if (username) users.add(username);
+        }
+        counts.set(room, users.size);
+      }
+      return counts;
+    },
+  };
 }

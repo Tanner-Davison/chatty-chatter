@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ChatMessage, ClientToServerEvents, ServerToClientEvents } from "@chatty/shared";
 import { signSessionToken, signSocketToken } from "../src/lib/tokens";
 import { RoomModel } from "../src/models/room.model";
-import { createSocketServer, type ChatServer } from "../src/socket";
+import { createSocketServer, socketPresence, type ChatServer } from "../src/socket";
 import { app, env, seedRoom, seedUser } from "./helpers";
 
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -125,5 +125,23 @@ describe("chat events", () => {
     const typing = new Promise((resolve) => ben.once("sender_is_typing", resolve));
     tanner.emit("typing", { room: 1 });
     expect(await typing).toEqual({ room: 1, username: "tanner" });
+  });
+});
+
+describe("socketPresence", () => {
+  it("counts distinct users with each room open", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    await seedRoom({ room_number: 2, created_by: "tanner" });
+    // tanner has two tabs in room 1; ben has it open once.
+    const [tab1, tab2, ben] = await Promise.all([
+      connected("tanner"),
+      connected("tanner"),
+      connected("ben"),
+    ]);
+    await Promise.all([join(tab1, 1), join(tab2, 1), join(ben, 1)]);
+
+    const counts = socketPresence(io).onlineCounts([1, 2]);
+    expect(counts.get(1)).toBe(2);
+    expect(counts.get(2)).toBeUndefined();
   });
 });

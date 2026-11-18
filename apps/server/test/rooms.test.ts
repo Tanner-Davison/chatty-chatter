@@ -17,7 +17,7 @@ beforeEach(async () => {
 describe("room endpoints require a session", () => {
   it.each([
     ["get", "/api/rooms/mine"],
-    ["get", "/api/rooms/explore"],
+    ["get", "/api/rooms/discover"],
     ["get", "/api/rooms/1"],
     ["post", "/api/rooms"],
     ["delete", "/api/rooms/1"],
@@ -127,11 +127,6 @@ describe("room lists", () => {
     expect(body.created.map((r: { room_number: number }) => r.room_number)).toEqual([1]);
     expect(body.joined.map((r: { room_number: number }) => r.room_number)).toEqual([2]);
     expect(body.created[0]).not.toHaveProperty("messageHistory");
-  });
-
-  it("GET /api/rooms/explore lists only rooms the user hasn't created or joined", async () => {
-    const { body } = await tanner.get("/api/rooms/explore").expect(200);
-    expect(body.map((r: { room_number: number }) => r.room_number)).toEqual([3]);
   });
 
   it("joining twice doesn't duplicate the room", async () => {
