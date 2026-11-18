@@ -14,5 +14,10 @@ export default defineConfig({
       },
     ],
   },
-  server: { port: 3000 },
+  server: {
+    port: 3000,
+    // Same-origin API in development, like the Netlify proxy in production,
+    // so the session cookie is first-party.
+    proxy: { "/api": "http://localhost:3001" },
+  },
 });

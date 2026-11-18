@@ -1,32 +1,26 @@
-// Socket.IO event contract between apps/web and apps/server.
+// Socket.IO event contract between apps/web and apps/server. The socket
+// authenticates with a short-lived token from GET /api/auth/socket-token, so
+// payloads never carry a username.
 
-export interface JoinRoomPayload {
-  room: number;
-  username: string;
-}
+import type { ChatMessage } from "./models";
+import type { RoomEventPayload, SendMessageInput } from "./schemas";
 
-export interface SendMessagePayload {
-  room: number;
-  username: string;
-  message: string;
-  timestamp: string;
-  imageUrl?: string;
-  cloudinary_id?: string;
-}
-
-export interface TypingPayload {
-  room: number;
-  username: string;
-}
+export type Ack<T = undefined> = (
+  response: { ok: true; data: T } | { ok: false; error: string },
+) => void;
 
 export interface ClientToServerEvents {
-  join_room: (payload: JoinRoomPayload) => void;
-  send_message: (payload: SendMessagePayload) => void;
-  typing: (payload: TypingPayload) => void;
-  leaveroom: (room: number) => void;
+  join_room: (payload: RoomEventPayload, ack: Ack) => void;
+  leave_room: (payload: RoomEventPayload) => void;
+  send_message: (payload: SendMessageInput, ack: Ack<ChatMessage>) => void;
+  typing: (payload: RoomEventPayload) => void;
 }
 
 export interface ServerToClientEvents {
-  receive_message: (payload: SendMessagePayload) => void;
-  sender_is_typing: (username: string) => void;
+  receive_message: (payload: { room: number; message: ChatMessage }) => void;
+  sender_is_typing: (payload: { room: number; username: string }) => void;
+}
+
+export interface SocketData {
+  username: string;
 }
