@@ -77,15 +77,24 @@ export function createCloudinaryChatImages(env: Env): ChatImageStore {
     upload: (file) =>
       new Promise((resolve, reject) => {
         cloudinary.uploader
-          .upload_stream({ folder: CHAT_FOLDER, resource_type: "image" }, (error, result) => {
-            if (error || !result) return reject(error ?? new Error("Cloudinary upload failed"));
-            resolve({
-              url: result.secure_url,
-              cloudinary_id: result.public_id,
-              width: result.width,
-              height: result.height,
-            });
-          })
+          .upload_stream(
+            {
+              folder: CHAT_FOLDER,
+              resource_type: "image",
+              // The account's default preset crops uploads into round 190px
+              // avatars; chat photos must keep their real size and shape.
+              upload_preset: "ml_default",
+            },
+            (error, result) => {
+              if (error || !result) return reject(error ?? new Error("Cloudinary upload failed"));
+              resolve({
+                url: result.secure_url,
+                cloudinary_id: result.public_id,
+                width: result.width,
+                height: result.height,
+              });
+            },
+          )
           .end(file.buffer);
       }),
     remove: async (ids) => {
