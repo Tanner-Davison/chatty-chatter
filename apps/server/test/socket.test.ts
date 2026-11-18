@@ -14,7 +14,7 @@ import { UserModel } from "../src/models/user.model";
 import { signSessionToken, signSocketToken } from "../src/lib/tokens";
 import { RoomModel } from "../src/models/room.model";
 import { createSocketServer, socketPresence, type ChatServer } from "../src/socket";
-import { app, env, loginAs, seedRoom, seedUser } from "./helpers";
+import { app, env, loginAs, seedRoom, seedUser, TEST_ROOM_PASSWORD } from "./helpers";
 
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 type AckResponse<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
@@ -106,7 +106,12 @@ describe("chat events", () => {
   });
 
   it("won't let a user join a private room they haven't unlocked", async () => {
-    await seedRoom({ room_number: 9, created_by: "ben", private_room: true, password: "hunter22" });
+    await seedRoom({
+      room_number: 9,
+      created_by: "ben",
+      private_room: true,
+      password: TEST_ROOM_PASSWORD,
+    });
     const tanner = await connected("tanner");
     expect(await join(tanner, 9)).toEqual({ ok: false, error: "This room is private" });
     expect(await send(tanner, 9, "sneaky")).toEqual({
@@ -192,7 +197,7 @@ describe("mentions", () => {
       room_number: 9,
       created_by: "tanner",
       private_room: true,
-      password: "hunter22",
+      password: TEST_ROOM_PASSWORD,
     });
     await UserModel.updateOne({ username: "cara" }, { $push: { roomsJoined: { room: 9 } } });
     const tanner = await connected("tanner");

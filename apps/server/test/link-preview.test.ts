@@ -7,7 +7,7 @@ import {
   isPublicAddress,
   parsePreview,
 } from "../src/lib/link-preview";
-import { env, loginAs, seedUser, uploadedPic } from "./helpers";
+import { env, loginAs, seedUser, TEST_ROOM_PASSWORD, uploadedPic } from "./helpers";
 
 describe("link preview safety", () => {
   it.each([
@@ -154,7 +154,7 @@ describe("GET /api/rooms/discover/surprise", () => {
       .expect(201);
     await ben
       .post("/api/rooms")
-      .send({ roomNumber: 3, name: "Secret", isPrivate: true, password: "hunter22" })
+      .send({ roomNumber: 3, name: "Secret", isPrivate: true, password: TEST_ROOM_PASSWORD })
       .expect(201);
 
     for (let i = 0; i < 5; i++) {

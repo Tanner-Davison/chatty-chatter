@@ -12,6 +12,9 @@ export const env = loadEnv({
   JWT_SECRET: "test-secret-that-is-at-least-32-characters-long",
 });
 
+/** Made-up password for private rooms in tests (lives only in the in-memory database). */
+export const TEST_ROOM_PASSWORD = "test-room-pw";
+
 export const uploadedPic: ProfilePic = {
   url: "https://res.cloudinary.com/x/pic.png",
   cloudinary_id: "pic",
