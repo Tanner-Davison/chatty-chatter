@@ -17,3 +17,6 @@ coverage/
 # misc
 .DS_Store
 npm-debug.log*
+
+# Netlify CLI
+.netlify/
