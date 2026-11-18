@@ -1,3 +1,4 @@
+import { messagePreview } from "@chatty/shared";
 import type { Types } from "mongoose";
 import type { ChatMessage, Notification, NotificationList } from "@chatty/shared";
 import { NotificationModel, type NotificationFields } from "../models/notification.model";
@@ -84,7 +85,10 @@ export async function notifyMentions(
       roomName: room?.room_name ?? undefined,
       messageId: message._id!,
       sentBy: message.sentBy,
-      preview: message.message.slice(0, PREVIEW_LENGTH) || "📷 Photo",
+      preview: messagePreview(message.message, Boolean(message.attachments?.length)).slice(
+        0,
+        PREVIEW_LENGTH,
+      ),
     })),
   );
   return docs.map((d) => ({
