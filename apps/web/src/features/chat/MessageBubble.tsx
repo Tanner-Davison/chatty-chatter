@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Trash2 } from "lucide-react";
 import { Avatar } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { formatMessageTime } from "../../lib/format";
@@ -21,6 +21,8 @@ interface MessageBubbleProps {
   /** Colour for @names in your own messages. */
   ownMentionClass: string;
   onRemovePreview: (messageId: string) => void;
+  /** Asks to delete this message; only passed for your own sent or failed messages. */
+  onDelete?: (() => void) | undefined;
 }
 
 export function MessageBubble({
@@ -31,6 +33,7 @@ export function MessageBubble({
   bubbleClass,
   ownMentionClass,
   onRemovePreview,
+  onDelete,
 }: MessageBubbleProps) {
   const { data: sender } = useUserProfile(startsGroup ? message.sentBy : undefined);
   // Old messages stored the sender's photo on the message itself.
@@ -45,7 +48,7 @@ export function MessageBubble({
     <li
       id={messageAnchor(message.key)}
       className={cn(
-        "-mx-3 flex scroll-mt-24 animate-fade-up gap-3 px-3 py-0.5 sm:-mx-6 sm:px-6",
+        "group/msg -mx-3 flex scroll-mt-24 animate-fade-up gap-3 px-3 py-0.5 sm:-mx-6 sm:px-6",
         isOwn && "flex-row-reverse",
         startsGroup ? "mt-4" : "mt-1",
       )}
@@ -69,23 +72,41 @@ export function MessageBubble({
           </p>
         )}
         <div
-          className={cn(
-            "flex max-w-full min-w-0 flex-col gap-1 rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
-            isOwn ? "rounded-tr-md" : "rounded-tl-md",
-            bubbleClass,
-            // Like Slack: messages that mention you stand out.
-            mentionsMe && "ring-2 ring-warning/70",
-            message.status === "pending" && "opacity-60",
-            message.status === "failed" &&
-              "bg-none bg-danger-soft text-danger ring-1 ring-danger/50 shadow-none",
-          )}
+          className={cn("flex max-w-full min-w-0 items-start gap-1.5", isOwn && "flex-row-reverse")}
         >
-          <MessageContent
-            text={message.message}
-            isOwn={isOwn}
-            me={me}
-            ownMentionClass={ownMentionClass}
-          />
+          <div
+            className={cn(
+              "flex max-w-full min-w-0 flex-col gap-1 rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed",
+              isOwn ? "rounded-tr-md" : "rounded-tl-md",
+              bubbleClass,
+              // Like Slack: messages that mention you stand out.
+              mentionsMe && "ring-2 ring-warning/70",
+              message.status === "pending" && "opacity-60",
+              message.status === "failed" &&
+                "bg-none bg-danger-soft text-danger ring-1 ring-danger/50 shadow-none",
+            )}
+          >
+            <MessageContent
+              text={message.message}
+              isOwn={isOwn}
+              me={me}
+              ownMentionClass={ownMentionClass}
+            />
+          </div>
+          {onDelete && (
+            // Slack-style hover toolbar beside the bubble; also shows on keyboard focus.
+            <div className="flex shrink-0 self-center rounded-lg bg-surface-overlay p-0.5 opacity-0 shadow-panel ring-1 ring-line-strong transition group-hover/msg:opacity-100 focus-within:opacity-100">
+              <button
+                type="button"
+                onClick={onDelete}
+                aria-label="Delete message"
+                title="Delete message"
+                className="flex size-7 cursor-pointer items-center justify-center rounded-md text-fg-subtle hover:bg-danger-soft hover:text-danger"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          )}
         </div>
         {firstUrl && message._id && (
           <LinkPreviewCard

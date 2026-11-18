@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, BellMinus, BellPlus, Crown, Lock, Plus } from "lucide-react";
 import type { Room } from "@chatty/shared";
-import { Badge, Button, LoadingBlock, Panel, StatusDot } from "../../components/ui";
+import { Badge, Button, ConfirmDialog, LoadingBlock, Panel, StatusDot } from "../../components/ui";
 import { useCurrentUser } from "../auth/currentUser";
 import { useJoinRoom, useLeaveRoom, useMyRooms, useRoom } from "../rooms/api";
 import { ChatSettings } from "./ChatSettings";
 import { Composer } from "./Composer";
 import { messageAnchor } from "./anchors";
+import type { ChatEntry } from "./chatReducer";
 import { MentionNavigator } from "./MentionNavigator";
 import { MessageBubble } from "./MessageBubble";
 import { PrivateRoomGate } from "./PrivateRoomGate";
@@ -81,9 +82,18 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
   const user = useCurrentUser();
   const navigate = useNavigate();
   const reload = useCallback(() => onReconnect(), [onReconnect]);
-  const { messages, send, notifyTyping, hidePreview, typingUser, connected, joinError } =
-    useChatRoom(room.room_number, room.messageHistory, user.username, reload);
+  const {
+    messages,
+    send,
+    notifyTyping,
+    hidePreview,
+    deleteMessage,
+    typingUser,
+    connected,
+    joinError,
+  } = useChatRoom(room.room_number, room.messageHistory, user.username, reload);
   const colors = useRoomColors(room.room_number);
+  const [confirmDelete, setConfirmDelete] = useState<ChatEntry | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
   // Whether the view should stay pinned to the newest message. Scrolling up to
@@ -223,6 +233,11 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
                 }
                 ownMentionClass={colors.sentMentionClass}
                 onRemovePreview={hidePreview}
+                onDelete={
+                  message.sentBy === user.username && message.status !== "pending"
+                    ? () => setConfirmDelete(message)
+                    : undefined
+                }
               />
             ))}
           </ol>
@@ -238,6 +253,19 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
           disabled={!connected}
         />
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        title="Delete message?"
+        confirmLabel="Delete"
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) deleteMessage(confirmDelete);
+          setConfirmDelete(null);
+        }}
+      >
+        This removes it for everyone in the hub. You can't undo this.
+      </ConfirmDialog>
     </div>
   );
 }

@@ -269,3 +269,17 @@ export async function hideLinkPreview(
   );
   if (result.matchedCount === 0) throw forbidden("You can only hide previews on your own messages");
 }
+
+/** Deletes a message for everyone. Only its sender may. */
+export async function deleteMessage(
+  username: string,
+  roomNumber: number,
+  messageId: string,
+): Promise<void> {
+  const _id = new Types.ObjectId(messageId);
+  const result = await RoomModel.updateOne(
+    { room_number: roomNumber, messageHistory: { $elemMatch: { _id, sentBy: username } } },
+    { $pull: { messageHistory: { _id } } },
+  );
+  if (result.matchedCount === 0) throw forbidden("You can only delete your own messages");
+}

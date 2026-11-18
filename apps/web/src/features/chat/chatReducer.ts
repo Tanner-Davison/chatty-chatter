@@ -12,7 +12,8 @@ export type ChatAction =
   | { type: "sending"; tempId: string; sentBy: string; text: string }
   | { type: "sent"; tempId: string; message: ChatMessage }
   | { type: "failed"; tempId: string }
-  | { type: "previewHidden"; messageId: string };
+  | { type: "previewHidden"; messageId: string }
+  | { type: "deleted"; key: string };
 
 const fromServer = (m: ChatMessage, index: number): ChatEntry => ({
   ...m,
@@ -45,6 +46,8 @@ export function chatReducer(state: ChatEntry[], action: ChatAction): ChatEntry[]
       return state.map((m) => (m.key === action.tempId ? fromServer(action.message, 0) : m));
     case "failed":
       return state.map((m) => (m.key === action.tempId ? { ...m, status: "failed" } : m));
+    case "deleted":
+      return state.filter((m) => m.key !== action.key);
     case "previewHidden":
       return state.map((m) => (m.key === action.messageId ? { ...m, linkPreviewHidden: true } : m));
   }

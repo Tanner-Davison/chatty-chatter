@@ -127,11 +127,12 @@ export type DiscoverQuery = z.input<typeof discoverQuerySchema>;
 
 export const objectIdSchema = z.string().regex(/^[a-f0-9]{24}$/, "Invalid id");
 
-export const hideLinkPreviewSchema = z.object({
-  room: roomNumberSchema,
-  messageId: objectIdSchema,
-});
-export type HideLinkPreviewInput = z.infer<typeof hideLinkPreviewSchema>;
+/** Points at one message in a room. */
+export const messageRefSchema = z.object({ room: roomNumberSchema, messageId: objectIdSchema });
+export type MessageRef = z.infer<typeof messageRefSchema>;
+
+export const hideLinkPreviewSchema = messageRefSchema;
+export type HideLinkPreviewInput = MessageRef;
 
 export const linkPreviewQuerySchema = z.object({
   url: z.url({ protocol: /^https?$/ }).max(2000),
