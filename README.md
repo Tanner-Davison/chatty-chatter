@@ -38,6 +38,21 @@ Share your thoughts, vote on others, and let the best response win!
   </tr>
 
 
+<h2>Development</h2>
+
+```
+apps/web        React client (Vite, Tailwind)
+apps/server     Express + Socket.IO API
+packages/shared Types shared by the client and server
+```
+
+1. `npm install` from the repo root.
+2. Create `apps/server/.env` with `MONGODB_URI`, `CLOUDINARY_API_KEY`, `CLOUDINARY_SECRET` and `PORT=3001`.
+3. Copy `apps/web/.env.example` to `apps/web/.env.development`.
+4. `npm run dev` starts both at http://localhost:3000 (web) and http://localhost:3001 (API).
+
+Other scripts: `npm run build`, `npm run typecheck`, `npm run lint`, `npm run format`.
+
 <h2>Contributing</h2>
 We are always open to improvements! If you have suggestions, bug reports, or feature requests, please open an issue. If you'd like to contribute directly, feel free to fork the repository and submit a pull request.
 <br></br>

@@ -1,6 +1,6 @@
 [build]
-  publish = "client/build"
-  command = "cd client && npm ci && npm run build"
+  publish = "apps/web/dist"
+  command = "npm ci && npm run build"
 
 [build.environment]
   # Use the newer Ubuntu Jammy build image (22.04)
