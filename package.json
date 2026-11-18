@@ -1,8 +1,30 @@
 {
-  "name": "chatty-chatter-server",
+  "name": "chatty-chatter",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "start": "cd server && npm install && npm start",
-    "dev": "cd server && npm install && npm run dev"
+    "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w @chatty/server\" \"npm run dev -w @chatty/web\"",
+    "build": "npm run build -w @chatty/web",
+    "start": "npm run start -w @chatty/server",
+    "heroku-postbuild": "echo \"Server has no build step yet\"",
+    "lint": "eslint .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "concurrently": "10.0.6",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.14.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
   },
   "engines": {
     "node": "22.x"
