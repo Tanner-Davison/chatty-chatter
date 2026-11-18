@@ -83,13 +83,32 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
     if (!target || !targetLoaded || jumpedTo.current === target) return;
     jumpedTo.current = target;
     const el = document.getElementById(messageAnchor(target));
-    el?.scrollIntoView({ block: "center", behavior: "smooth" });
-    el?.animate(
+    if (!el) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    // A quiet "you were sent here" cue: a faint amber row tint (the colour of
+    // mentions of you) with a thin left bar. It waits for the scroll to land,
+    // holds briefly, then fades.
+    const on = {
+      backgroundColor: "rgb(251 191 36 / 0.1)",
+      boxShadow: "inset 2px 0 0 rgb(251 191 36 / 0.85)",
+    };
+    const off = {
+      backgroundColor: "rgb(251 191 36 / 0)",
+      boxShadow: "inset 2px 0 0 rgb(251 191 36 / 0)",
+    };
+    el.animate(
       [
-        { backgroundColor: "rgb(251 191 36 / 0.22)", boxShadow: "0 0 0 2px rgb(251 191 36 / 0.6)" },
-        { backgroundColor: "transparent", boxShadow: "0 0 0 2px transparent" },
+        { ...on, offset: 0 },
+        { ...on, offset: 0.45 },
+        { ...off, offset: 1 },
       ],
-      { duration: 2600, easing: "ease-out" },
+      {
+        duration: 3200,
+        delay: reduceMotion ? 0 : 350,
+        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+        fill: "backwards",
+      },
     );
   }, [target, targetLoaded]);
   const clearTarget = () =>

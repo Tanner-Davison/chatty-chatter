@@ -39,7 +39,7 @@ export function MessageBubble({
     <li
       id={messageAnchor(message.key)}
       className={cn(
-        "flex scroll-mt-24 animate-fade-up gap-3 rounded-2xl",
+        "-mx-3 flex scroll-mt-24 animate-fade-up gap-3 px-3 py-0.5 sm:-mx-6 sm:px-6",
         isOwn && "flex-row-reverse",
         startsGroup ? "mt-4" : "mt-1",
       )}
