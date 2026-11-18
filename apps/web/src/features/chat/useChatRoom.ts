@@ -54,12 +54,23 @@ export function useChatRoom(
       clearTimeout(typingTimer);
       typingTimer = setTimeout(() => setTypingUser(null), TYPING_SHOWN_MS);
     };
+    const onUpdated = (payload: {
+      room: number;
+      messageId: string;
+      linkPreviewHidden: boolean;
+    }) => {
+      if (payload.room === room && payload.linkPreviewHidden) {
+        dispatch({ type: "previewHidden", messageId: payload.messageId });
+      }
+    };
     socket.on("receive_message", onMessage);
     socket.on("sender_is_typing", onTyping);
+    socket.on("message_updated", onUpdated);
     return () => {
       clearTimeout(typingTimer);
       socket.off("receive_message", onMessage);
       socket.off("sender_is_typing", onTyping);
+      socket.off("message_updated", onUpdated);
     };
   }, [socket, room]);
 
@@ -82,5 +93,14 @@ export function useChatRoom(
     socket.emit("typing", { room });
   }, [socket, room]);
 
-  return { messages, send, notifyTyping, typingUser, connected, joinError };
+  /** Removes the preview from the sender's own message for everyone. */
+  const hidePreview = useCallback(
+    (messageId: string) => {
+      dispatch({ type: "previewHidden", messageId });
+      socket.emit("hide_link_preview", { room, messageId }, () => {});
+    },
+    [socket, room],
+  );
+
+  return { messages, send, notifyTyping, hidePreview, typingUser, connected, joinError };
 }

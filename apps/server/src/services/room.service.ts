@@ -46,6 +46,8 @@ interface MessageRecord {
   timestamp?: string | null;
   imageUrl?: string | null;
   cloudinary_id?: string | null;
+  mentions?: string[] | null;
+  linkPreviewHidden?: boolean | null;
 }
 
 export function toMessage(m: MessageRecord): ChatMessage {
@@ -56,6 +58,8 @@ export function toMessage(m: MessageRecord): ChatMessage {
     timestamp: m.timestamp ?? "",
     imageUrl: opt(m.imageUrl),
     cloudinary_id: opt(m.cloudinary_id),
+    ...(m.mentions?.length && { mentions: m.mentions }),
+    ...(m.linkPreviewHidden && { linkPreviewHidden: true }),
   };
 }
 
@@ -226,7 +230,12 @@ export async function markPresent(username: string, roomNumber: number): Promise
   );
 }
 
-export async function addMessage(username: string, input: NewMessage): Promise<ChatMessage> {
+/** Stores a message. `mentions` must already be checked (see message.service). */
+export async function addMessage(
+  username: string,
+  input: NewMessage,
+  mentions: string[] = [],
+): Promise<ChatMessage> {
   const _id = new Types.ObjectId();
   const message = {
     _id,
@@ -235,6 +244,7 @@ export async function addMessage(username: string, input: NewMessage): Promise<C
     timestamp: new Date().toISOString(),
     ...(input.imageUrl && { imageUrl: input.imageUrl }),
     ...(input.cloudinary_id && { cloudinary_id: input.cloudinary_id }),
+    ...(mentions.length > 0 && { mentions }),
   };
   const result = await RoomModel.updateOne(
     { room_number: input.room },
@@ -242,4 +252,20 @@ export async function addMessage(username: string, input: NewMessage): Promise<C
   );
   if (result.matchedCount === 0) throw notFound("Room not found");
   return toMessage(message);
+}
+
+/** Removes a message's link preview for everyone. Only its sender may. */
+export async function hideLinkPreview(
+  username: string,
+  roomNumber: number,
+  messageId: string,
+): Promise<void> {
+  const result = await RoomModel.updateOne(
+    {
+      room_number: roomNumber,
+      messageHistory: { $elemMatch: { _id: new Types.ObjectId(messageId), sentBy: username } },
+    },
+    { $set: { "messageHistory.$.linkPreviewHidden": true } },
+  );
+  if (result.matchedCount === 0) throw forbidden("You can only hide previews on your own messages");
 }

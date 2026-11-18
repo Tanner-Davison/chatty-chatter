@@ -52,4 +52,10 @@ describe("chatReducer", () => {
     const reloaded = chatReducer(state, { type: "loaded", messages: [msg("a")] });
     expect(reloaded.map((m) => m.key)).toEqual(["a", "t1"]);
   });
+
+  it("marks a message's link preview hidden", () => {
+    const state = chatReducer([], { type: "loaded", messages: [msg("a"), msg("b")] });
+    const next = chatReducer(state, { type: "previewHidden", messageId: "b" });
+    expect(next.map((m) => m.linkPreviewHidden)).toEqual([undefined, true]);
+  });
 });

@@ -41,6 +41,10 @@ export interface ChatMessage {
   timestamp: string;
   imageUrl?: string;
   cloudinary_id?: string;
+  /** Usernames this message notified. */
+  mentions?: string[];
+  /** The sender removed the link preview for everyone. */
+  linkPreviewHidden?: boolean;
 }
 
 /** A room in a list: no message history. */
@@ -97,4 +101,32 @@ export interface RoomPeek {
   room: DiscoverRoom;
   locked: boolean;
   messages: ChatMessage[];
+}
+
+export interface Notification {
+  _id: string;
+  type: "mention";
+  room: number;
+  roomName?: string;
+  messageId: string;
+  sentBy: string;
+  /** The start of the message. */
+  preview: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationList {
+  notifications: Notification[];
+  unreadCount: number;
+}
+
+/** What a link unfurls to. Every field is optional because pages vary. */
+export interface LinkPreview {
+  url: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+  favicon?: string;
 }

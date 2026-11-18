@@ -1,6 +1,6 @@
 import { useDeferredValue, useState, type ReactNode } from "react";
-import { useSearchParams } from "react-router";
-import { Compass, Search, Sparkles, Users } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router";
+import { Compass, Dices, Search, Sparkles, Users } from "lucide-react";
 import {
   DISCOVER_SORTS,
   ROOM_CATEGORIES,
@@ -8,9 +8,10 @@ import {
   type DiscoverSort,
   type RoomCategory,
 } from "@chatty/shared";
-import { LoadingBlock, Panel, PanelHeader } from "../../components/ui";
+import { Button, LoadingBlock, Panel, PanelHeader } from "../../components/ui";
 import { cn } from "../../lib/cn";
-import { useDiscover, useFriendRooms } from "./api";
+import { useMyRooms } from "../rooms/api";
+import { useDiscover, useFriendRooms, useSurprise } from "./api";
 import { CATEGORY_ICONS } from "./categoryIcons";
 import { HubCard } from "./HubCard";
 import { PeekSheet } from "./PeekSheet";
@@ -52,14 +53,37 @@ export function ExplorePage() {
   // The trending sort ranks online and today's activity first, then recency.
   const trending = rooms.slice(0, 8);
   const openPeek = (room: DiscoverRoom) => update({ peek: String(room.room_number) });
+  const favorites = useFavoriteCategories();
+  const surprise = useSurprise();
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="flex items-center gap-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          <Compass className="size-8 text-primary" /> Explore hubs
-        </h1>
-        <p className="text-fg-muted">Find where the chatter is. Peek inside before you jump in.</p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="flex items-center gap-3 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            <Compass className="size-8 text-primary" /> Explore hubs
+          </h1>
+          <p className="text-fg-muted">
+            Find where the chatter is. Peek inside before you jump in.
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            variant="public"
+            size="lg"
+            icon={<Dices className="size-5" />}
+            loading={surprise.isPending}
+            onClick={() =>
+              surprise.mutate(undefined, {
+                onSuccess: ({ room_number }) => void navigate(`/chatroom/${room_number}`),
+              })
+            }
+          >
+            Surprise me
+          </Button>
+          {surprise.isError && <p className="text-xs text-danger">{surprise.error.message}</p>}
+        </div>
       </header>
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -132,6 +156,8 @@ export function ExplorePage() {
           {!filtering && trending.length > 0 && (
             <Row title="Trending now" accent="public" rooms={trending} onOpen={openPeek} />
           )}
+          {!filtering &&
+            favorites.map((c) => <CategoryRow key={c} category={c} onOpen={openPeek} />)}
           {!filtering && friends.data && friends.data.length > 0 && (
             <Row
               title="Your friends are here"
@@ -236,5 +262,45 @@ function Row({
         ))}
       </div>
     </section>
+  );
+}
+
+/** The (up to two) categories the user is most into, from hubs they created or joined. */
+function useFavoriteCategories(): RoomCategory[] {
+  const { data } = useMyRooms();
+  if (!data) return [];
+  const counts = new Map<RoomCategory, number>();
+  for (const room of [...data.created, ...data.joined]) {
+    if (isCategory(room.room_category ?? null)) {
+      const c = room.room_category as RoomCategory;
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([c]) => c);
+}
+
+/** "More in Gaming": hubs in a favourite category the user isn't in yet. */
+function CategoryRow({
+  category,
+  onOpen,
+}: {
+  category: RoomCategory;
+  onOpen: (room: DiscoverRoom) => void;
+}) {
+  const { data } = useDiscover({ sort: "trending", category });
+  const rooms = (data ?? []).filter((r) => r.membership === "none").slice(0, 8);
+  if (rooms.length === 0) return null;
+  const Icon = CATEGORY_ICONS[category];
+  return (
+    <Row
+      title={`More in ${category}`}
+      accent="public"
+      icon={<Icon className="size-4" />}
+      rooms={rooms}
+      onOpen={onOpen}
+    />
   );
 }

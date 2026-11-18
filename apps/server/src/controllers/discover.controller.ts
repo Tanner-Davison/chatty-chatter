@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
 import { discoverQuerySchema, roomNumberParamsSchema } from "@chatty/shared";
+import { notFound } from "../lib/http-error";
 import type { Presence } from "../lib/presence";
 import { parse } from "../lib/validate";
 import { currentUser } from "../middleware/auth";
@@ -20,5 +21,11 @@ export function createDiscoverController(presence: Presence) {
     res.json(await discoverService.peekRoom(currentUser(req).username, roomNumber, presence));
   };
 
-  return { discover, friends, peek };
+  const surprise: RequestHandler = async (req, res) => {
+    const pick = await discoverService.surpriseRoom(currentUser(req).username, presence);
+    if (!pick) throw notFound("There are no public hubs yet");
+    res.json(pick);
+  };
+
+  return { discover, friends, peek, surprise };
 }

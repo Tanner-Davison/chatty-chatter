@@ -122,3 +122,20 @@ export const discoverQuerySchema = z.object({
   q: z.string().trim().max(50).optional(),
 });
 export type DiscoverQuery = z.input<typeof discoverQuerySchema>;
+
+export const objectIdSchema = z.string().regex(/^[a-f0-9]{24}$/, "Invalid id");
+
+export const hideLinkPreviewSchema = z.object({
+  room: roomNumberSchema,
+  messageId: objectIdSchema,
+});
+export type HideLinkPreviewInput = z.infer<typeof hideLinkPreviewSchema>;
+
+export const linkPreviewQuerySchema = z.object({
+  url: z.url({ protocol: /^https?$/ }).max(2000),
+});
+
+export const markNotificationsReadSchema = z.object({
+  /** Omit to mark everything read. */
+  ids: z.array(objectIdSchema).max(100).optional(),
+});

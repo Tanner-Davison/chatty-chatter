@@ -12,6 +12,7 @@ import {
 import { useLogout } from "../../features/auth/api";
 import { useCurrentUser } from "../../features/auth/currentUser";
 import { HubFinder } from "../../features/rooms/HubFinder";
+import { NotificationBell } from "../../features/notifications/NotificationBell";
 import { cn } from "../../lib/cn";
 import { Avatar, Button, IconButton, Logo } from "../ui";
 
@@ -46,6 +47,7 @@ export function AppHeader() {
         <HubFinder className="ml-auto hidden w-64 sm:block" />
 
         <div className="ml-auto flex items-center gap-2 sm:ml-0">
+          <NotificationBell />
           <Link to={`/profile/${user.username}`} aria-label="Your profile">
             <Avatar src={user.profilePic?.url} name={user.username} size="sm" ring="primary" />
           </Link>

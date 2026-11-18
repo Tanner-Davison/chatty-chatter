@@ -6,6 +6,8 @@ const messageSchema = new Schema({
   timestamp: String,
   imageUrl: String,
   cloudinary_id: String,
+  mentions: { type: [String], default: undefined },
+  linkPreviewHidden: Boolean,
 });
 
 // Field names match the documents already in the `rooms` collection.

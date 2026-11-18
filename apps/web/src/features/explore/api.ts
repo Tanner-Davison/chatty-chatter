@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type { DiscoverQuery, DiscoverRoom, RoomPeek } from "@chatty/shared";
 import { api } from "../../lib/api";
 import { roomKeys } from "../rooms/api";
@@ -33,5 +33,12 @@ export function useRoomPeek(roomNumber: number | null) {
     queryKey: roomKeys.peek(roomNumber ?? 0),
     queryFn: () => api.get<RoomPeek>(`/rooms/${roomNumber}/peek`),
     enabled: roomNumber !== null,
+  });
+}
+
+/** Picks a random active public hub the user isn't in yet. */
+export function useSurprise() {
+  return useMutation({
+    mutationFn: () => api.get<{ room_number: number }>("/rooms/discover/surprise"),
   });
 }

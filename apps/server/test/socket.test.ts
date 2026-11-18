@@ -2,11 +2,19 @@ import { createServer, type Server as HttpServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ChatMessage, ClientToServerEvents, ServerToClientEvents } from "@chatty/shared";
+import type {
+  ChatMessage,
+  ClientToServerEvents,
+  Notification,
+  ServerToClientEvents,
+} from "@chatty/shared";
+import request from "supertest";
+import { NotificationModel } from "../src/models/notification.model";
+import { UserModel } from "../src/models/user.model";
 import { signSessionToken, signSocketToken } from "../src/lib/tokens";
 import { RoomModel } from "../src/models/room.model";
 import { createSocketServer, socketPresence, type ChatServer } from "../src/socket";
-import { app, env, seedRoom, seedUser } from "./helpers";
+import { app, env, loginAs, seedRoom, seedUser } from "./helpers";
 
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
 type AckResponse<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
@@ -143,5 +151,118 @@ describe("socketPresence", () => {
     const counts = socketPresence(io).onlineCounts([1, 2]);
     expect(counts.get(1)).toBe(2);
     expect(counts.get(2)).toBeUndefined();
+  });
+});
+
+describe("mentions", () => {
+  const nextNotification = (socket: Client) =>
+    new Promise<Notification>((resolve) => socket.once("notification", resolve));
+
+  it("notifies mentioned users live, on every tab, and stores who was mentioned", async () => {
+    await seedUser("cara");
+    await seedRoom({ room_number: 1, created_by: "tanner", room_name: "Pub" });
+    const [tanner, benTab1, benTab2] = await Promise.all([
+      connected("tanner"),
+      connected("ben"),
+      connected("ben"),
+    ]);
+    await join(tanner, 1);
+
+    const live = Promise.all([nextNotification(benTab1), nextNotification(benTab2)]);
+    const ack = await send(tanner, 1, "hey @Ben and @ghost and @tanner, look");
+    expect(ack.ok && ack.data.mentions).toEqual(["ben"]);
+
+    const [n1, n2] = await live;
+    expect(n1).toMatchObject({
+      type: "mention",
+      room: 1,
+      roomName: "Pub",
+      sentBy: "tanner",
+      read: false,
+    });
+    expect(n1.messageId).toBe(ack.ok && ack.data._id);
+    expect(n1.preview).toBe("hey @Ben and @ghost and @tanner, look");
+    expect(n2._id).toBe(n1._id);
+    expect(await NotificationModel.countDocuments()).toBe(1);
+  });
+
+  it("doesn't notify people who can't see a private room", async () => {
+    await seedUser("cara");
+    await seedRoom({
+      room_number: 9,
+      created_by: "tanner",
+      private_room: true,
+      password: "hunter22",
+    });
+    await UserModel.updateOne({ username: "cara" }, { $push: { roomsJoined: { room: 9 } } });
+    const tanner = await connected("tanner");
+    await join(tanner, 9);
+
+    const ack = await send(tanner, 9, "@ben @cara secret plans");
+    expect(ack.ok && ack.data.mentions).toEqual(["cara"]);
+    expect(await NotificationModel.find().distinct("recipient")).toEqual(["cara"]);
+  });
+
+  it("lists notifications newest first and marks them read", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tanner = await connected("tanner");
+    await join(tanner, 1);
+    await send(tanner, 1, "first @ben");
+    await send(tanner, 1, "second @ben");
+
+    const ben = await loginAs("ben");
+    const list = await ben.get("/api/notifications").expect(200);
+    expect(list.body.unreadCount).toBe(2);
+    expect(list.body.notifications.map((n: Notification) => n.preview)).toEqual([
+      "second @ben",
+      "first @ben",
+    ]);
+
+    // Someone else can't mark ben's notifications read.
+    const other = await loginAs("tanner");
+    await other
+      .post("/api/notifications/read")
+      .send({ ids: [list.body.notifications[0]._id] })
+      .expect(204);
+    expect((await ben.get("/api/notifications")).body.unreadCount).toBe(2);
+
+    await ben
+      .post("/api/notifications/read")
+      .send({ ids: [list.body.notifications[0]._id] })
+      .expect(204);
+    expect((await ben.get("/api/notifications")).body.unreadCount).toBe(1);
+    await ben.post("/api/notifications/read").send({}).expect(204);
+    expect((await ben.get("/api/notifications")).body.unreadCount).toBe(0);
+    await ben
+      .post("/api/notifications/read")
+      .send({ ids: ["nope"] })
+      .expect(400);
+    await request(app).get("/api/notifications").expect(401);
+  });
+});
+
+describe("hide_link_preview", () => {
+  const hide = (socket: Client, room: number, messageId: string) =>
+    new Promise<AckResponse>((resolve) =>
+      socket.emit("hide_link_preview", { room, messageId }, resolve),
+    );
+
+  it("lets only the sender hide a preview, for everyone", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await Promise.all([join(tanner, 1), join(ben, 1)]);
+    const ack = await send(tanner, 1, "look https://example.com");
+    const messageId = ack.ok ? ack.data._id! : "";
+
+    expect(await hide(ben, 1, messageId)).toEqual({
+      ok: false,
+      error: "You can only hide previews on your own messages",
+    });
+
+    const updated = new Promise((resolve) => ben.once("message_updated", resolve));
+    expect(await hide(tanner, 1, messageId)).toEqual({ ok: true });
+    expect(await updated).toEqual({ room: 1, messageId, linkPreviewHidden: true });
+    const history = (await (await loginAs("ben")).get("/api/rooms/1")).body.messageHistory;
+    expect(history.at(-1)).toMatchObject({ _id: messageId, linkPreviewHidden: true });
   });
 });

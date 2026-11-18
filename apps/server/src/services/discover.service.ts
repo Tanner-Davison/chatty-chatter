@@ -199,3 +199,23 @@ export async function peekRoom(
     .lean();
   return { room, locked, messages: (doc?.messageHistory ?? []).map(toMessage) };
 }
+
+const SURPRISE_POOL = 10;
+
+/** A random public hub the viewer isn't in, picked from the most active ones. */
+export async function surpriseRoom(
+  username: string,
+  presence: Presence,
+): Promise<{ room_number: number } | null> {
+  const rooms = await runDiscovery(
+    { private_room: { $ne: true } },
+    "trending",
+    DISCOVER_LIMIT,
+    await loadViewer(username),
+    presence,
+  );
+  const fresh = rooms.filter((r) => r.membership === "none");
+  const pool = (fresh.length > 0 ? fresh : rooms).slice(0, SURPRISE_POOL);
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  return pick ? { room_number: pick.room_number } : null;
+}
