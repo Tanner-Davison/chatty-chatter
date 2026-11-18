@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, LayoutGrid, Rows3 } from "lucide-react";
-import type { RoomSummary } from "@chatty/shared";
+import type { MyRoom } from "@chatty/shared";
 import { IconButton, Panel, PanelHeader } from "../../components/ui";
 import { RoomCard, type RoomKind } from "./RoomCard";
 
@@ -15,10 +15,10 @@ const accentFor = {
 interface RoomGridProps {
   title: string;
   kind: RoomKind;
-  rooms: RoomSummary[];
+  rooms: MyRoom[];
   emptyText: string;
-  onLeave?: (room: RoomSummary) => void;
-  onDelete?: (room: RoomSummary) => void;
+  onLeave?: (room: MyRoom) => void;
+  onDelete?: (room: MyRoom) => void;
 }
 
 /** One dashboard section: a page of hub tiles, or every tile in "view all" mode. */
@@ -27,7 +27,16 @@ export function RoomGrid({ title, kind, rooms, emptyText, onLeave, onDelete }: R
   const [showAll, setShowAll] = useState(false);
   const [page, setPage] = useState(0);
 
-  const visible = rooms.filter((r) => !hidden.has(r._id));
+  // Hubs with something new first, then the most recently active.
+  const visible = rooms
+    .filter((r) => !hidden.has(r._id))
+    .sort(
+      (a, b) =>
+        Number(b.unreadCount + b.unreadMentions > 0) -
+          Number(a.unreadCount + a.unreadMentions > 0) ||
+        b.lastActiveAt.localeCompare(a.lastActiveAt),
+    );
+  const newCount = visible.reduce((sum, r) => sum + r.unreadCount, 0);
   const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const current = Math.min(page, pageCount - 1);
   const shown = showAll ? visible : visible.slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE);
@@ -38,6 +47,11 @@ export function RoomGrid({ title, kind, rooms, emptyText, onLeave, onDelete }: R
         title={
           <>
             {title} <span className="text-sm font-normal text-fg-subtle">{visible.length}</span>
+            {newCount > 0 && (
+              <span className="ml-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary ring-1 ring-primary/40">
+                {newCount} new
+              </span>
+            )}
           </>
         }
         accent={accentFor[kind]}

@@ -78,9 +78,20 @@ export interface Room extends RoomSummary {
   messageHistory: ChatMessage[];
 }
 
+/** One of your hubs, with what's happened since you last looked. */
+export interface MyRoom extends RoomSummary {
+  /** ISO time of the newest message (or of creation). */
+  lastActiveAt: string;
+  /** Messages from other people since you last had the hub open. */
+  unreadCount: number;
+  /** Unread notifications for mentions of you in this hub. */
+  unreadMentions: number;
+  lastMessage?: { message: string; sentBy: string };
+}
+
 export interface MyRooms {
-  created: RoomSummary[];
-  joined: RoomSummary[];
+  created: MyRoom[];
+  joined: MyRoom[];
 }
 
 export interface ApiError {

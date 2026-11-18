@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Attachment, ChatMessage } from "@chatty/shared";
 import { chatReducer, type ChatEntry } from "./chatReducer";
+import { roomKeys } from "../rooms/api";
 import { useSocket } from "./socketContext";
 
 const TYPING_SHOWN_MS = 4000;
@@ -18,6 +20,7 @@ export function useChatRoom(
   onReconnect: () => void,
 ) {
   const { socket, connected } = useSocket();
+  const queryClient = useQueryClient();
   const [messages, dispatch] = useReducer(chatReducer, []);
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -34,8 +37,11 @@ export function useChatRoom(
     wasConnected.current = true;
     return () => {
       socket.emit("leave_room", { room });
+      // Leaving marks the hub seen on the server; refresh the dashboard's
+      // unread counts once that has landed.
+      setTimeout(() => void queryClient.invalidateQueries({ queryKey: roomKeys.mine }), 400);
     };
-  }, [socket, connected, room, onReconnect]);
+  }, [socket, connected, room, onReconnect, queryClient]);
 
   useEffect(() => {
     if (!connected) wasConnected.current = false;

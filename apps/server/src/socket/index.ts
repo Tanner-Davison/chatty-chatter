@@ -61,12 +61,20 @@ function registerHandlers(
   const { username } = socket.data;
   void socket.join(userChannel(username));
 
+  // Closing the tab or losing connection counts as having seen the open hub.
+  socket.on("disconnecting", () => {
+    for (const name of socket.rooms) {
+      if (name.startsWith("room:")) void roomService.markSeen(username, Number(name.slice(5)));
+    }
+  });
+
   socket.on(
     "join_room",
     handle(roomEventSchema, async ({ room }) => {
       await roomService.assertCanAccess(username, room);
       await socket.join(channel(room));
       await roomService.markPresent(username, room);
+      await roomService.markSeen(username, room);
       return undefined;
     }),
   );
@@ -74,6 +82,7 @@ function registerHandlers(
   socket.on(
     "leave_room",
     handle(roomEventSchema, async ({ room }) => {
+      if (socket.rooms.has(channel(room))) await roomService.markSeen(username, room);
       await socket.leave(channel(room));
     }),
   );

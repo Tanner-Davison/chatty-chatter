@@ -406,3 +406,58 @@ describe("photo messages", () => {
     expect(removedPhotos).toEqual(["chat_images/c"]);
   });
 });
+
+describe("hub activity on the dashboard", () => {
+  const mine = async (agent: Awaited<ReturnType<typeof loginAs>>, room: number) => {
+    const { body } = await agent.get("/api/rooms/mine").expect(200);
+    return [...body.created, ...body.joined].find(
+      (r: { room_number: number }) => r.room_number === room,
+    );
+  };
+  const leave = (socket: Client, room: number) =>
+    new Promise<void>((resolve) => {
+      socket.emit("leave_room", { room });
+      setTimeout(resolve, 50);
+    });
+
+  it("counts messages from others since you last had the hub open, plus unread mentions", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tannerHttp = await loginAs("tanner");
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await join(ben, 1);
+    await send(ben, 1, "before tanner ever looked");
+    // Never opened since tracking started: nothing counts as new.
+    expect(await mine(tannerHttp, 1)).toMatchObject({ unreadCount: 0, unreadMentions: 0 });
+
+    await join(tanner, 1);
+    await leave(tanner, 1);
+    await send(ben, 1, "one");
+    await send(ben, 1, "two for @tanner");
+    await send(ben, 1, "three");
+    const room = await mine(tannerHttp, 1);
+    expect(room).toMatchObject({
+      unreadCount: 3,
+      unreadMentions: 1,
+      lastMessage: { message: "three", sentBy: "ben" },
+    });
+    expect(Date.now() - new Date(room.lastActiveAt).getTime()).toBeLessThan(5000);
+
+    // Your own messages never count, and opening the hub clears the count.
+    await join(tanner, 1);
+    await send(tanner, 1, "mine");
+    expect((await mine(tannerHttp, 1)).unreadCount).toBe(0);
+  });
+
+  it("closing the tab counts as having seen the hub", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const tannerHttp = await loginAs("tanner");
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await Promise.all([join(tanner, 1), join(ben, 1)]);
+    await send(ben, 1, "hello");
+    tanner.disconnect();
+    await new Promise((r) => setTimeout(r, 100));
+    expect((await mine(tannerHttp, 1)).unreadCount).toBe(0);
+    await send(ben, 1, "after you left");
+    expect((await mine(tannerHttp, 1)).unreadCount).toBe(1);
+  });
+});
