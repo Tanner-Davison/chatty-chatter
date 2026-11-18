@@ -1,11 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router";
-import { Check, Globe, Hash, Lock, Search, Shapes, Type } from "lucide-react";
+import { Check, Globe, Hash, KeyRound, Link2, Lock, Search, Shapes, Type } from "lucide-react";
 import { createRoomSchema, ROOM_CATEGORIES, type CreateRoomInput } from "@chatty/shared";
 import { Badge, Button, Field, Input, Panel, PasswordInput, Select } from "../../components/ui";
 import { ApiRequestError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import { isRoomNumberAvailable, useCreateRoom } from "./api";
+
+/** How people get into a private hub. */
+type PrivateAccess = "invite" | "password";
 
 type Errors = Partial<Record<"roomNumber" | "name" | "category" | "password" | "_", string>>;
 
@@ -29,8 +32,10 @@ export function CreateRoomPage() {
   );
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
+  const [access, setAccess] = useState<PrivateAccess>("invite");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Errors>({});
+  const needsPassword = isPrivate && access === "password";
 
   const checkNumber = async () => {
     const n = Number(roomNumber);
@@ -49,7 +54,7 @@ export function CreateRoomPage() {
         name,
         category: category || undefined,
         isPrivate,
-        ...(isPrivate && password && { password }),
+        ...(needsPassword && { password }),
       };
       // The schema allows no category (old hubs have none), but new hubs need one.
       const parsed = createRoomSchema.safeParse(draft);
@@ -103,6 +108,29 @@ export function CreateRoomPage() {
           tone="private"
         />
       </div>
+
+      {isPrivate && (
+        <div
+          role="radiogroup"
+          aria-label="Who can get in"
+          className="mt-3 grid animate-fade-up gap-2 sm:grid-cols-2"
+        >
+          <AccessOption
+            selected={access === "invite"}
+            onSelect={() => setAccess("invite")}
+            icon={<Link2 />}
+            title="Invite only"
+            description="People join with your invite link or when a member adds them. Hidden from Explore."
+          />
+          <AccessOption
+            selected={access === "password"}
+            onSelect={() => setAccess("password")}
+            icon={<KeyRound />}
+            title="Password protected"
+            description="Anyone with the password can join. Listed in Explore with a lock. Invite links work too."
+          />
+        </div>
+      )}
 
       <form onSubmit={submit} className="mt-6 flex flex-col gap-5" noValidate>
         {!isPrivate && (
@@ -169,16 +197,12 @@ export function CreateRoomPage() {
           )}
         </Field>
 
-        {isPrivate && (
+        {needsPassword && (
           <Field
-            label="Hub password (optional)"
-            icon={<Lock className="size-3.5" />}
+            label="Hub password"
+            icon={<KeyRound className="size-3.5" />}
             error={errors.password}
-            hint={
-              password
-                ? "People can join with this password or an invite link."
-                : "Leave blank for invite-only: people join with your invite link or when a member adds them, and the hub stays out of Explore."
-            }
+            hint="Share it with the people you want inside. At least 4 characters."
           >
             {(props) => (
               <PasswordInput
@@ -200,10 +224,52 @@ export function CreateRoomPage() {
           loading={create.isPending}
           disabled={!isPrivate && availability === "taken"}
         >
-          Create {isPrivate ? "private" : "public"} hub
+          Create{" "}
+          {!isPrivate ? "public" : access === "invite" ? "invite-only" : "password-protected"} hub
         </Button>
       </form>
     </Panel>
+  );
+}
+
+function AccessOption({
+  selected,
+  onSelect,
+  icon,
+  title,
+  description,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={cn(
+        "flex cursor-pointer flex-col gap-1 rounded-xl p-3 text-left ring-1 transition",
+        selected
+          ? "bg-private-soft ring-private/60"
+          : "bg-ink-950/40 ring-line hover:ring-private/40",
+      )}
+    >
+      <span
+        className={cn(
+          "flex items-center gap-2 font-display text-sm font-semibold [&_svg]:size-4",
+          selected ? "text-private" : "text-fg",
+        )}
+      >
+        {icon}
+        {title}
+        {selected && <Check className="ml-auto" />}
+      </span>
+      <span className="text-xs leading-relaxed text-fg-muted">{description}</span>
+    </button>
   );
 }
 
