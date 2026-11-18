@@ -1,5 +1,3 @@
-
-
 <h1>ChattyChatter.com </h1>
 Welcome to the official GitHub repository for the ChatterMatters website! Dive into some live, interactive debates on gender topics, share your insights, and see what others have to say.
 
@@ -18,11 +16,10 @@ Head over to ChattyChatter.com and sign up.
 Once logged in, you'll be directed to the current live debate.
 Share your thoughts, vote on others, and let the best response win!
 
-
 <table>
   <tr>
     <th>Tech Stack</th>
-  
+
   </tr>
   <tr>
     <td>Frontend: </td>
@@ -37,7 +34,6 @@ Share your thoughts, vote on others, and let the best response win!
    <td>postgres</td>
   </tr>
 
-
 <h2>Development</h2>
 
 ```
@@ -47,45 +43,42 @@ packages/shared Types shared by the client and server
 ```
 
 1. `npm install` from the repo root.
-2. Create `apps/server/.env` with `MONGODB_URI`, `CLOUDINARY_API_KEY`, `CLOUDINARY_SECRET` and `PORT=3001`.
+2. Copy `apps/server/.env.example` to `apps/server/.env` and fill in `MONGODB_URI`, `JWT_SECRET` and the Cloudinary keys.
 3. Copy `apps/web/.env.example` to `apps/web/.env.development`.
 4. `npm run dev` starts both at http://localhost:3000 (web) and http://localhost:3001 (API).
 
-Other scripts: `npm run build`, `npm run typecheck`, `npm run lint`, `npm run format`.
+Other scripts: `npm test` (server tests on an in-memory MongoDB), `npm run build`, `npm run typecheck`, `npm run lint`, `npm run format`.
 
 <h2>Contributing</h2>
 We are always open to improvements! If you have suggestions, bug reports, or feature requests, please open an issue. If you'd like to contribute directly, feel free to fork the repository and submit a pull request.
 <br></br>
 <br></br>
 
+|                  | Backend Basics                                                                |
+| ---------------- | ----------------------------------------------------------------------------- |
+| Version Control: | git                                                                           |
+| Server:          | Node.js --> express.js                                                        |
+| WebSocket Setup  | socket.io                                                                     |
+| User Profiles:   | Store and retrieve user profile data like avatars, usernames, etc.            |
+| Message Storage: | Store chat messages in the database for history or potential future features. |
 
+|                      | Frontend                                                     |
+| -------------------- | ------------------------------------------------------------ |
+| Framework:           | React --> create-react-app                                   |
+| Chat Interface:      | Build a basic chat interface component                       |
+| Connect to Frontend: | Implement basic message sending and receiving functionality. |
 
-| | Backend Basics
--|-
-Version Control: |  git
-Server: | Node.js --> express.js
-WebSocket Setup | socket.io 
-User Profiles: | Store and retrieve user profile data like avatars, usernames, etc.
-Message Storage: | Store chat messages in the database for history or potential future features.
+|               | User Auth                                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Login/Logout: | Implement user sign-up and login functionality on the backend.                                                        |
+| Components:   | Create frontend components for login and sign-up forms.                                                               |
+| Integration:  | Integrate the frontend and backend authentication. Ensure that users are authenticated before they can send messages. |
 
-|| Frontend 
--|-
-Framework: |  React --> create-react-app
-Chat Interface: | Build a basic chat interface component
-Connect to  Frontend: | Implement basic message sending and receiving functionality.
-
-|| User Auth
--|-
-Login/Logout: | Implement user sign-up and login functionality on the backend.
-Components: | Create frontend components for login and sign-up forms.
-Integration: | Integrate the frontend and backend authentication. Ensure that users are authenticated before they can send messages.
-
- | | ChatGPT API
--|-
-Generate Topics: | Use the OpenAI API (or another provider's API) to generate debate topics.
-Event Action: | Implement a button or an event trigger on the frontend to fetch a topic.
-Display: | Display the topic prominently in the chat interface.
-
+|                  | ChatGPT API                                                               |
+| ---------------- | ------------------------------------------------------------------------- |
+| Generate Topics: | Use the OpenAI API (or another provider's API) to generate debate topics. |
+| Event Action:    | Implement a button or an event trigger on the frontend to fetch a topic.  |
+| Display:         | Display the topic prominently in the chat interface.                      |
 
 License
 This project is licensed under the MIT License.

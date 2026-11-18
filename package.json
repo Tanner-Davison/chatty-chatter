@@ -9,11 +9,12 @@
     "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w @chatty/server\" \"npm run dev -w @chatty/web\"",
     "build": "npm run build -w @chatty/web",
     "start": "npm run start -w @chatty/server",
-    "heroku-postbuild": "echo \"Server has no build step yet\"",
+    "heroku-postbuild": "npm run build -w @chatty/server",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
