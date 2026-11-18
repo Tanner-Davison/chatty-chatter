@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 import { ArrowLeft, ImagePlus, LogIn, UserPlus } from "lucide-react";
-import { loginSchema, signupSchema } from "@chatty/shared";
+import { forgotPasswordSchema, loginSchema, signupSchema } from "@chatty/shared";
 import {
   Avatar,
   Button,
@@ -13,10 +13,10 @@ import {
   PasswordInput,
 } from "../../components/ui";
 import { ApiRequestError } from "../../lib/api";
-import { useLogin, useMe, useSignup } from "./api";
+import { useForgotPassword, useLogin, useMe, useSignup } from "./api";
 
-type Mode = "welcome" | "login" | "signup";
-type FieldErrors = Partial<Record<"username" | "password" | "_", string>>;
+type Mode = "welcome" | "login" | "signup" | "forgot";
+type FieldErrors = Partial<Record<"username" | "email" | "password" | "_", string>>;
 
 /** Turns zod or API validation issues into one message per field. */
 function toFieldErrors(
@@ -72,8 +72,14 @@ export function LoginPage() {
         </div>
       ) : (
         <Panel className="w-full animate-fade-up p-6 shadow-glow-primary sm:p-8">
-          {mode === "login" ? (
-            <LoginForm to={from} onBack={() => setMode("welcome")} />
+          {mode === "forgot" ? (
+            <ForgotForm onBack={() => setMode("login")} />
+          ) : mode === "login" ? (
+            <LoginForm
+              to={from}
+              onBack={() => setMode("welcome")}
+              onForgot={() => setMode("forgot")}
+            />
           ) : (
             <SignupForm onBack={() => setMode("welcome")} />
           )}
@@ -98,7 +104,15 @@ function FormHeader({ title, onBack }: { title: string; onBack: () => void }) {
   );
 }
 
-function LoginForm({ to, onBack }: { to: string; onBack: () => void }) {
+function LoginForm({
+  to,
+  onBack,
+  onForgot,
+}: {
+  to: string;
+  onBack: () => void;
+  onForgot: () => void;
+}) {
   const login = useLogin();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
@@ -121,7 +135,7 @@ function LoginForm({ to, onBack }: { to: string; onBack: () => void }) {
       className="flex flex-col gap-4"
     >
       <FormHeader title="Welcome back" onBack={onBack} />
-      <Field label="Username" error={errors.username}>
+      <Field label="Username or email" error={errors.username}>
         {(props) => (
           <Input
             {...props}
@@ -142,6 +156,13 @@ function LoginForm({ to, onBack }: { to: string; onBack: () => void }) {
           />
         )}
       </Field>
+      <button
+        type="button"
+        onClick={onForgot}
+        className="-mt-2 w-fit cursor-pointer text-sm text-primary hover:underline"
+      >
+        Forgot password?
+      </button>
       {errors._ && (
         <p role="alert" className="text-sm text-danger">
           {errors._}
@@ -158,6 +179,7 @@ function SignupForm({ onBack }: { onBack: () => void }) {
   const signup = useSignup();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -173,7 +195,7 @@ function SignupForm({ onBack }: { onBack: () => void }) {
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        const parsed = signupSchema.safeParse({ username, password });
+        const parsed = signupSchema.safeParse({ username, email, password });
         if (!parsed.success) return setErrors(toFieldErrors(parsed.error.issues));
         setErrors({});
         signup.mutate(
@@ -185,7 +207,9 @@ function SignupForm({ onBack }: { onBack: () => void }) {
                 err instanceof ApiRequestError && err.issues
                   ? toFieldErrors(err.issues)
                   : err instanceof ApiRequestError && err.status === 409
-                    ? { username: err.message }
+                    ? err.message.toLowerCase().includes("email")
+                      ? { email: err.message }
+                      : { username: err.message }
                     : { _: err.message },
               ),
           },
@@ -231,6 +255,21 @@ function SignupForm({ onBack }: { onBack: () => void }) {
           />
         )}
       </Field>
+      <Field
+        label="Email"
+        error={errors.email}
+        hint="Private. Used to verify your account and reset your password."
+      >
+        {(props) => (
+          <Input
+            {...props}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+        )}
+      </Field>
       <Field label="Password" error={errors.password} hint="At least 8 characters.">
         {(props) => (
           <PasswordInput
@@ -248,6 +287,62 @@ function SignupForm({ onBack }: { onBack: () => void }) {
       )}
       <Button type="submit" variant="primary" size="lg" loading={signup.isPending} className="mt-2">
         Create account
+      </Button>
+    </form>
+  );
+}
+
+/** Asks for a reset link. Always gives the same answer, so it can't reveal who has an account. */
+function ForgotForm({ onBack }: { onBack: () => void }) {
+  const forgot = useForgotPassword();
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string>();
+
+  if (forgot.isSuccess) {
+    return (
+      <div className="flex flex-col gap-4">
+        <FormHeader title="Check your email" onBack={onBack} />
+        <p className="text-sm leading-relaxed text-fg-muted">
+          If a verified account uses <span className="font-medium text-fg">{email}</span>, a link to
+          reset your password is on its way. It works for 1 hour.
+        </p>
+        <Button variant="primary" size="lg" onClick={onBack}>
+          Back to login
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        const parsed = forgotPasswordSchema.safeParse({ email });
+        if (!parsed.success) return setError(parsed.error.issues[0]?.message);
+        setError(undefined);
+        forgot.mutate(parsed.data.email, { onError: (err) => setError(err.message) });
+      }}
+      className="flex flex-col gap-4"
+    >
+      <FormHeader title="Reset your password" onBack={onBack} />
+      <p className="-mt-2 text-sm text-fg-muted">
+        Enter your account's email and we'll send you a reset link.
+      </p>
+      <Field label="Email" error={error}>
+        {(props) => (
+          <Input
+            {...props}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            autoFocus
+          />
+        )}
+      </Field>
+      <Button type="submit" variant="primary" size="lg" loading={forgot.isPending} className="mt-2">
+        Send reset link
       </Button>
     </form>
   );

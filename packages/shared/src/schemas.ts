@@ -19,15 +19,26 @@ export const usernameSchema = z
 // bcrypt only looks at the first 72 bytes.
 const passwordSchema = z.string().max(72, "Password must be at most 72 characters");
 
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254)
+  .pipe(z.email("Enter a valid email address"));
+
+const newPasswordSchema = passwordSchema.min(8, "Password must be at least 8 characters");
+
 export const signupSchema = z.object({
   username: usernameSchema,
-  password: passwordSchema.min(8, "Password must be at least 8 characters"),
+  email: emailSchema,
+  password: newPasswordSchema,
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
 // Login stays lenient so accounts created before these rules still work.
+// `username` may also be the account's email address.
 export const loginSchema = z.object({
-  username: z.string().trim().min(1, "Enter your username").max(64),
+  username: z.string().trim().min(1, "Enter your username or email").max(254),
   password: passwordSchema.min(1, "Enter your password"),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -159,3 +170,19 @@ export const roomPreferencesSchema = z.object({
   receivedColor: z.enum(RECEIVED_COLORS).nullable().optional(),
 });
 export type RoomPreferencesInput = z.infer<typeof roomPreferencesSchema>;
+
+// Email verification and password reset
+
+/** The random token from an emailed link. */
+export const emailTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{32,128}$/, "This link is invalid");
+
+export const verifyEmailSchema = z.object({ token: emailTokenSchema });
+
+export const updateEmailSchema = z.object({ email: emailSchema });
+
+export const forgotPasswordSchema = z.object({ email: emailSchema });
+
+export const resetPasswordSchema = z.object({
+  token: emailTokenSchema,
+  password: newPasswordSchema,
+});

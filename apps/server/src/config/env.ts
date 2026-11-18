@@ -18,6 +18,11 @@ const envSchema = z
     CLOUD_NAME: z.string().default("dezclgtpg"),
     CLOUDINARY_API_KEY: z.string().optional(),
     CLOUDINARY_SECRET: z.string().optional(),
+    /** Without it, emails are written to the server log instead of sent. */
+    RESEND_API_KEY: z.string().optional(),
+    EMAIL_FROM: z.string().default("Chatty Chatter <noreply@mail.chattychatter.com>"),
+    /** Where emailed links point. */
+    APP_URL: z.url().default("https://chattychatter.com"),
   })
   .transform((env) => ({
     ...env,

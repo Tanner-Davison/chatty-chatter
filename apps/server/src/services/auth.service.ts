@@ -14,10 +14,22 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 /** Exact match first, then lowercase: signup always lowercased, but some old accounts may not be. */
-export async function findUserWithPassword(username: string): Promise<UserDocument | null> {
-  const exact = await UserModel.findOne({ username }).select("+password");
-  if (exact || username === username.toLowerCase()) return exact;
-  return UserModel.findOne({ username: username.toLowerCase() }).select("+password");
+/**
+ * Finds an account by username (exact, then lowercase: some old accounts
+ * aren't lowercase) or, failing that, by email. Usernames win, because some
+ * old usernames are themselves email addresses.
+ */
+export async function findUserWithPassword(identifier: string): Promise<UserDocument | null> {
+  const lower = identifier.toLowerCase();
+  return (
+    (await UserModel.findOne({ username: identifier }).select("+password")) ??
+    (identifier !== lower
+      ? await UserModel.findOne({ username: lower }).select("+password")
+      : null) ??
+    (identifier.includes("@")
+      ? await UserModel.findOne({ email: lower }).select("+password")
+      : null)
+  );
 }
 
 export async function login({ username, password }: LoginInput): Promise<UserDocument> {
@@ -28,12 +40,16 @@ export async function login({ username, password }: LoginInput): Promise<UserDoc
 }
 
 export async function signup(
-  { username, password }: SignupInput,
+  { username, email, password }: SignupInput,
   profilePic?: ProfilePic,
 ): Promise<UserDocument> {
   if (await UserModel.exists({ username })) throw conflict("That username is taken");
+  if (await UserModel.exists({ email }))
+    throw conflict("That email is already used by another account");
   return UserModel.create({
     username,
+    email,
+    emailVerified: false,
     password: await hashPassword(password),
     ...(profilePic && { profilePic }),
   });

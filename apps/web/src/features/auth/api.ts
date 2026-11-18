@@ -34,6 +34,7 @@ export function useSignup() {
     mutationFn: ({ image, ...input }: SignupInput & { image?: File | null }) => {
       const form = new FormData();
       form.append("username", input.username);
+      form.append("email", input.email);
       form.append("password", input.password);
       if (image) form.append("image", image);
       return api.post<User>("/auth/signup", form);
@@ -50,5 +51,40 @@ export function useLogout() {
       queryClient.clear();
       queryClient.setQueryData(meQueryKey, null);
     },
+  });
+}
+
+/** Confirms an email from the link in the verification email. */
+export function useVerifyEmail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => api.post<void>("/auth/verify-email", { token }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: meQueryKey }),
+  });
+}
+
+export function useResendVerification() {
+  return useMutation({ mutationFn: () => api.post<void>("/auth/resend-verification") });
+}
+
+/** Adds or changes the account's email; a verification link goes to the new address. */
+export function useUpdateEmail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (email: string) => api.put<User>("/users/me/email", { email }),
+    onSuccess: (user) => queryClient.setQueryData(meQueryKey, user),
+  });
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (email: string) => api.post<void>("/auth/forgot-password", { email }),
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (input: { token: string; password: string }) =>
+      api.post<void>("/auth/reset-password", input),
   });
 }
