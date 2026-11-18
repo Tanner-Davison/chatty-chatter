@@ -29,6 +29,9 @@ export interface User {
   profileBio?: string;
   education?: string;
   profession?: string;
+  /** Only on your own account. */
+  email?: string;
+  emailVerified?: boolean;
   /** Chat colours chosen per hub, keyed by room number. Only on your own profile. */
   roomPreferences?: Record<string, RoomPreferences>;
 }

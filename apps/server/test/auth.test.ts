@@ -63,11 +63,13 @@ describe("POST /api/auth/signup", () => {
     const res = await agent
       .post("/api/auth/signup")
       .field("username", "NewPerson")
+      .field("email", "New.Person@Example.com")
       .field("password", "longenough")
       .attach("image", Buffer.from("fake-png"), { filename: "me.png", contentType: "image/png" })
       .expect(201);
 
     expect(res.body.username).toBe("newperson");
+    expect(res.body).toMatchObject({ email: "new.person@example.com", emailVerified: false });
     expect(res.body.profilePic).toEqual(uploadedPic);
     const stored = await UserModel.findOne({ username: "newperson" }).select("+password");
     expect(stored?.password).toMatch(/^\$2[ab]\$12\$/);
@@ -77,7 +79,7 @@ describe("POST /api/auth/signup", () => {
   it("works without a photo", async () => {
     await request(app)
       .post("/api/auth/signup")
-      .send({ username: "nophoto", password: "longenough" })
+      .send({ username: "nophoto", email: "nophoto@example.com", password: "longenough" })
       .expect(201);
   });
 
@@ -85,22 +87,25 @@ describe("POST /api/auth/signup", () => {
     await seedUser("tanner");
     await request(app)
       .post("/api/auth/signup")
-      .send({ username: "tanner", password: "longenough" })
+      .send({ username: "tanner", email: "fresh@example.com", password: "longenough" })
       .expect(409);
   });
 
   it("rejects short passwords and odd usernames", async () => {
     const res = await request(app)
       .post("/api/auth/signup")
-      .send({ username: "a b", password: "short" })
+      .send({ username: "a b", email: "not-an-email", password: "short" })
       .expect(400);
-    expect(Object.keys(res.body.issues)).toEqual(expect.arrayContaining(["username", "password"]));
+    expect(Object.keys(res.body.issues)).toEqual(
+      expect.arrayContaining(["username", "email", "password"]),
+    );
   });
 
   it("rejects non-image uploads", async () => {
     await request(app)
       .post("/api/auth/signup")
       .field("username", "person")
+      .field("email", "person@example.com")
       .field("password", "longenough")
       .attach("image", Buffer.from("x"), { filename: "x.txt", contentType: "text/plain" })
       .expect(400);

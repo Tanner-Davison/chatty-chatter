@@ -12,8 +12,13 @@ import * as userService from "../services/user.service";
 export const getProfile: RequestHandler = async (req, res) => {
   const { username } = parse(usernameParamsSchema, req.params);
   const profile = (await userService.getUser(username)).toJSON() as Record<string, unknown>;
-  // Chat colour choices are personal.
-  if (username !== currentUser(req).username) delete profile.roomPreferences;
+  // Colours, email and activity are only for the account's owner.
+  if (username !== currentUser(req).username) {
+    delete profile.roomPreferences;
+    delete profile.email;
+    delete profile.emailVerified;
+    delete profile.lastSeen;
+  }
   res.json(profile);
 };
 

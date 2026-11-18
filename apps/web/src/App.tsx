@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, Navigate, RouterProvider, type RouteObject } from "react-router";
 import { AppShell } from "./components/layout/AppShell";
 import { LoadingBlock } from "./components/ui";
+import { ResetPasswordPage, VerifyEmailPage } from "./features/auth/AccountLinkPages";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RequireAuth } from "./features/auth/RequireAuth";
 import { ChatPage } from "./features/chat/ChatPage";
@@ -34,6 +35,8 @@ const DesignSystemPage = import.meta.env.DEV
 
 const routes: RouteObject[] = [
   { path: "/", element: <LoginPage /> },
+  { path: "/verify-email", element: <VerifyEmailPage /> },
+  { path: "/reset-password", element: <ResetPasswordPage /> },
   {
     element: <RequireAuth />,
     children: [

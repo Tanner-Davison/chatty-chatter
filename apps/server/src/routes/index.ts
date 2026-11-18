@@ -9,6 +9,7 @@ import {
 } from "../lib/cloudinary";
 import { badRequest } from "../lib/http-error";
 import type { LinkPreviewer } from "../lib/link-preview";
+import type { Mailer } from "../lib/mailer";
 import type { Notifier } from "../lib/notifier";
 import type { Presence } from "../lib/presence";
 import { createAuthController } from "../controllers/auth.controller";
@@ -25,14 +26,15 @@ export interface ApiDeps {
   presence: Presence;
   chatImages: ChatImageStore;
   notifier: Notifier;
+  mailer: Mailer;
   linkPreviewer: LinkPreviewer;
 }
 
 export function createApiRouter(
   env: Env,
-  { uploadImage, presence, linkPreviewer, chatImages, notifier }: ApiDeps,
+  { uploadImage, presence, linkPreviewer, chatImages, notifier, mailer }: ApiDeps,
 ): Router {
-  const auth = createAuthController(env, uploadImage);
+  const auth = createAuthController(env, uploadImage, mailer);
   const discover = createDiscoverController(presence);
   const friends = createFriendController(notifier);
   const authed = requireAuth(env);
@@ -53,6 +55,11 @@ export function createApiRouter(
   router.post("/auth/signup", authLimiter, imageUpload.single("image"), auth.signup);
   router.post("/auth/login", authLimiter, auth.login);
   router.post("/auth/logout", auth.logout);
+  router.post("/auth/verify-email", authLimiter, auth.verifyEmail);
+  router.post("/auth/resend-verification", authed, authLimiter, auth.resendVerification);
+  router.post("/auth/forgot-password", authLimiter, auth.forgotPassword);
+  router.post("/auth/reset-password", authLimiter, auth.resetPassword);
+  router.put("/users/me/email", authed, authLimiter, auth.updateEmail);
   router.get("/auth/me", authed, auth.me);
   router.get("/auth/socket-token", authed, auth.socketToken);
 

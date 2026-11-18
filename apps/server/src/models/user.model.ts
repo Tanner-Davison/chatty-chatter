@@ -5,6 +5,10 @@ const userSchema = new Schema(
   {
     username: { type: String, required: true, index: true },
     password: { type: String, required: true, select: false },
+    // Private: login, verification and password resets. Accounts made before
+    // email existed have none until they add one.
+    email: { type: String, lowercase: true, trim: true },
+    emailVerified: { type: Boolean, default: false },
     profilePic: {
       url: String,
       cloudinary_id: String,
@@ -46,6 +50,12 @@ const userSchema = new Schema(
       },
     },
   },
+);
+
+// One account per email; accounts without an email don't conflict.
+userSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: "string" } } },
 );
 
 export type UserFields = InferSchemaType<typeof userSchema>;
