@@ -15,10 +15,6 @@ export const getMyRooms: RequestHandler = async (req, res) => {
   res.json(await roomService.getMyRooms(currentUser(req).username));
 };
 
-export const getExploreRooms: RequestHandler = async (req, res) => {
-  res.json(await roomService.getExploreRooms(currentUser(req).username));
-};
-
 export const searchRooms: RequestHandler = async (req, res) => {
   const { name } = parse(searchRoomsQuerySchema, req.query);
   res.json(await roomService.searchRooms(name));

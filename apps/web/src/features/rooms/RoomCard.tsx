@@ -4,7 +4,6 @@ import {
   DoorOpen,
   EllipsisVertical,
   EyeOff,
-  KeyRound,
   Lock,
   LogOut,
   Trash2,
@@ -16,17 +15,14 @@ import { Avatar, Menu, type MenuItem } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { useUserProfile } from "../profile/api";
 
-export type RoomKind = "subscribed" | "public" | "private" | "explore";
+export type RoomKind = "subscribed" | "public" | "private";
 
-// Each section's tile takes its role colour; explore tiles follow the room's own type.
-const tileColor = (kind: RoomKind, room: RoomSummary) =>
-  kind === "subscribed"
-    ? "var(--color-primary)"
-    : kind === "private" || room.private_room
-      ? "var(--color-private)"
-      : kind === "public"
-        ? "var(--color-public)"
-        : "var(--color-ink-400)";
+// Each section's tile takes its role colour.
+const TILE_COLORS: Record<RoomKind, string> = {
+  subscribed: "var(--color-primary)",
+  public: "var(--color-public)",
+  private: "var(--color-private)",
+};
 
 interface RoomCardProps {
   room: RoomSummary;
@@ -43,9 +39,7 @@ export function RoomCard({ room, kind, onHide, onLeave, onDelete }: RoomCardProp
   const name = room.room_name?.trim() || `Hub #${room.room_number}`;
 
   const items: MenuItem[] = [
-    room.private_room && kind === "explore"
-      ? { label: "Request access", icon: <KeyRound />, onSelect: open }
-      : { label: "Visit hub", icon: <DoorOpen />, onSelect: open },
+    { label: "Visit hub", icon: <DoorOpen />, onSelect: open },
     {
       label: "Owner's profile",
       icon: <UserRound />,
@@ -65,7 +59,7 @@ export function RoomCard({ room, kind, onHide, onLeave, onDelete }: RoomCardProp
       onClick={open}
       onKeyDown={(e) => e.key === "Enter" && open()}
       aria-label={`${name}, hub ${room.room_number}${room.private_room ? ", private" : ""}`}
-      style={{ "--tile-color": tileColor(kind, room) } as CSSProperties}
+      style={{ "--tile-color": TILE_COLORS[kind] } as CSSProperties}
       className={cn(
         "group tile-checker relative flex aspect-square w-full cursor-pointer flex-col justify-between rounded-tile p-3",
         "ring-1 ring-[color-mix(in_oklab,var(--tile-color)_45%,transparent)] transition duration-200",

@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { ArrowLeft, BellMinus, BellPlus, Crown, Lock, Plus } from "lucide-react";
 import type { Room } from "@chatty/shared";
 import { Badge, Button, LoadingBlock, Panel, StatusDot } from "../../components/ui";
-import { useCurrentUser } from "../auth/api";
+import { useCurrentUser } from "../auth/currentUser";
 import { useJoinRoom, useLeaveRoom, useMyRooms, useRoom } from "../rooms/api";
 import { Composer } from "./Composer";
+import { messageAnchor } from "./anchors";
 import { MessageBubble } from "./MessageBubble";
 import { PrivateRoomGate } from "./PrivateRoomGate";
 import { TypingIndicator } from "./TypingIndicator";
@@ -42,22 +43,90 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
   const user = useCurrentUser();
   const navigate = useNavigate();
   const reload = useCallback(() => onReconnect(), [onReconnect]);
-  const { messages, send, notifyTyping, typingUser, connected, joinError } = useChatRoom(
-    room.room_number,
-    room.messageHistory,
-    user.username,
-    reload,
-  );
-  const scroller = useRef<HTMLOListElement>(null);
+  const { messages, send, notifyTyping, hidePreview, typingUser, connected, joinError } =
+    useChatRoom(room.room_number, room.messageHistory, user.username, reload);
+  const scroller = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLOListElement>(null);
+  // Whether the view should stay pinned to the newest message. Scrolling up to
+  // read history unpins it; scrolling back down pins it again.
+  const pinned = useRef(true);
 
-  // Follow new messages, unless the user has scrolled up to read history.
+  // Follow new messages while pinned, and always after sending one yourself.
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
-    const last = messages.at(-1);
-    if (nearBottom || last?.sentBy === user.username) el.scrollTop = el.scrollHeight;
+    if (pinned.current || messages.at(-1)?.sentBy === user.username) {
+      el.scrollTop = el.scrollHeight;
+      pinned.current = true;
+    }
   }, [messages, typingUser, user.username]);
+
+  // Link previews and images load after their message, growing the list; stay
+  // at the bottom while pinned.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !list.current) return;
+    const observer = new ResizeObserver(() => {
+      if (pinned.current) el.scrollTop = el.scrollHeight;
+    });
+    observer.observe(list.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Arriving from a notification (?m=<messageId>): center that message and flash it, once.
+  const [params, setParams] = useSearchParams();
+  const target = params.get("m");
+  const jumpedTo = useRef<string | null>(null);
+  const targetLoaded = Boolean(target && messages.some((m) => m.key === target));
+  const missedTarget = Boolean(target && messages.length > 0 && !targetLoaded);
+  useEffect(() => {
+    if (!target || !targetLoaded || jumpedTo.current === target) return;
+    jumpedTo.current = target;
+    const el = document.getElementById(messageAnchor(target));
+    if (!el) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    // A quiet "you were sent here" cue: a faint amber row tint (the colour of
+    // mentions of you) with a thin left bar. It waits for the scroll to land,
+    // holds briefly, then fades.
+    const on = {
+      backgroundColor: "rgb(251 191 36 / 0.1)",
+      boxShadow: "inset 2px 0 0 rgb(251 191 36 / 0.85)",
+    };
+    const off = {
+      backgroundColor: "rgb(251 191 36 / 0)",
+      boxShadow: "inset 2px 0 0 rgb(251 191 36 / 0)",
+    };
+    el.animate(
+      [
+        { ...on, offset: 0 },
+        { ...on, offset: 0.45 },
+        { ...off, offset: 1 },
+      ],
+      {
+        duration: 3200,
+        delay: reduceMotion ? 0 : 350,
+        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+        fill: "backwards",
+      },
+    );
+  }, [target, targetLoaded]);
+  const clearTarget = () =>
+    setParams(
+      (p) => {
+        p.delete("m");
+        return p;
+      },
+      { replace: true },
+    );
+
+  // Anyone in the room or who has posted in it can be @mentioned.
+  const mentionables = useMemo(() => {
+    const names = new Set([...room.users_in_room, ...messages.map((m) => m.sentBy)]);
+    names.delete(user.username);
+    names.delete("");
+    return [...names];
+  }, [room.users_in_room, messages, user.username]);
 
   return (
     <div className="flex h-[calc(100dvh-8rem)] flex-col gap-3">
@@ -91,28 +160,55 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
       </Panel>
 
       <Panel className="relative min-h-0 flex-1">
-        <ol
+        {missedTarget && (
+          <p
+            role="status"
+            className="absolute inset-x-3 top-3 z-10 flex items-center justify-between gap-2 rounded-xl bg-surface-overlay px-4 py-2 text-sm text-fg-muted ring-1 ring-line-strong"
+          >
+            That message is too far back to show here.
+            <button
+              type="button"
+              onClick={clearTarget}
+              className="cursor-pointer text-primary hover:underline"
+            >
+              Dismiss
+            </button>
+          </p>
+        )}
+        <div
           ref={scroller}
-          aria-label="Messages"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+          }}
           className="h-full overflow-y-auto px-3 pb-4 sm:px-6"
         >
-          {messages.length === 0 && (
-            <li className="py-16 text-center text-sm text-fg-subtle">No messages yet. Say hi!</li>
-          )}
-          {messages.map((message, i) => (
-            <MessageBubble
-              key={message.key}
-              message={message}
-              isOwn={message.sentBy === user.username}
-              startsGroup={messages[i - 1]?.sentBy !== message.sentBy}
-            />
-          ))}
-        </ol>
+          <ol ref={list} aria-label="Messages">
+            {messages.length === 0 && (
+              <li className="py-16 text-center text-sm text-fg-subtle">No messages yet. Say hi!</li>
+            )}
+            {messages.map((message, i) => (
+              <MessageBubble
+                key={message.key}
+                message={message}
+                isOwn={message.sentBy === user.username}
+                startsGroup={messages[i - 1]?.sentBy !== message.sentBy}
+                me={user.username}
+                onRemovePreview={hidePreview}
+              />
+            ))}
+          </ol>
+        </div>
       </Panel>
 
       <div className="flex flex-col gap-1">
         <TypingIndicator username={typingUser} />
-        <Composer onSend={send} onTyping={notifyTyping} disabled={!connected} />
+        <Composer
+          onSend={send}
+          onTyping={notifyTyping}
+          mentionables={mentionables}
+          disabled={!connected}
+        />
       </div>
     </div>
   );

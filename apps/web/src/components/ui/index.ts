@@ -1,8 +1,10 @@
 export { Avatar } from "./Avatar";
+export { AvatarStack } from "./AvatarStack";
 export { Badge, StatusDot, type BadgeTone } from "./Badge";
 export { Button, IconButton } from "./Button";
 export { Field, Input, PasswordInput, Select, Textarea } from "./Field";
 export { Logo } from "./Logo";
 export { Menu, type MenuItem } from "./Menu";
 export { Panel, PanelHeader } from "./Panel";
+export { Sheet } from "./Sheet";
 export { LoadingBlock, Spinner } from "./Spinner";

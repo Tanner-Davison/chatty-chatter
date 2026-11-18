@@ -20,13 +20,6 @@ export function useMe() {
   });
 }
 
-/** For components rendered behind RequireAuth, where the user is known to exist. */
-export function useCurrentUser(): User {
-  const { data } = useMe();
-  if (!data) throw new Error("useCurrentUser used outside RequireAuth");
-  return data;
-}
-
 export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({

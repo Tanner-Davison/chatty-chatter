@@ -10,7 +10,6 @@ const accentFor = {
   subscribed: "primary",
   public: "public",
   private: "private",
-  explore: "neutral",
 } as const;
 
 interface RoomGridProps {

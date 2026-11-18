@@ -49,6 +49,19 @@ packages/shared Types shared by the client and server
 
 Other scripts: `npm test` (server tests on an in-memory MongoDB), `npm run build`, `npm run typecheck`, `npm run lint`, `npm run format`.
 
+### Deploying
+
+Pushing to `main` deploys everything:
+
+- **Netlify** builds and deploys the client (`apps/web`).
+- **GitHub Actions** (`.github/workflows/ci.yml`) runs typecheck, lint, tests and both builds. If they pass and the push touched the server (`apps/server`, `packages/shared`, the lockfile, `Procfile` or `.nvmrc`), it deploys the server to Heroku and checks `/api/health`.
+
+The workflow needs a `HEROKU_API_KEY` repository secret. Create one with:
+
+```
+heroku authorizations:create -d "GitHub Actions deploy" -S | gh secret set HEROKU_API_KEY
+```
+
 <h2>Contributing</h2>
 We are always open to improvements! If you have suggestions, bug reports, or feature requests, please open an issue. If you'd like to contribute directly, feel free to fork the repository and submit a pull request.
 <br></br>

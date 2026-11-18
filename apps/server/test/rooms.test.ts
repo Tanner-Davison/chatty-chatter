@@ -2,7 +2,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { RoomModel } from "../src/models/room.model";
 import { UserModel } from "../src/models/user.model";
-import { app, loginAs, seedRoom, seedUser } from "./helpers";
+import { app, loginAs, seedRoom, seedUser, TEST_ROOM_PASSWORD } from "./helpers";
 
 type Agent = Awaited<ReturnType<typeof loginAs>>;
 
@@ -17,7 +17,7 @@ beforeEach(async () => {
 describe("room endpoints require a session", () => {
   it.each([
     ["get", "/api/rooms/mine"],
-    ["get", "/api/rooms/explore"],
+    ["get", "/api/rooms/discover"],
     ["get", "/api/rooms/1"],
     ["post", "/api/rooms"],
     ["delete", "/api/rooms/1"],
@@ -47,7 +47,7 @@ describe("POST /api/rooms", () => {
   it("creates a private room with a hashed password that is never returned", async () => {
     const res = await tanner
       .post("/api/rooms")
-      .send({ roomNumber: 7, name: "Secret", isPrivate: true, password: "hunter22" })
+      .send({ roomNumber: 7, name: "Secret", isPrivate: true, password: TEST_ROOM_PASSWORD })
       .expect(201);
     expect(res.body).not.toHaveProperty("private_room_password");
 
@@ -88,7 +88,12 @@ describe("reading rooms", () => {
   });
 
   it("hides a private room's messages until the user joins with the password", async () => {
-    await seedRoom({ room_number: 9, created_by: "ben", private_room: true, password: "hunter22" });
+    await seedRoom({
+      room_number: 9,
+      created_by: "ben",
+      private_room: true,
+      password: TEST_ROOM_PASSWORD,
+    });
 
     await tanner.get("/api/rooms/9").expect(403);
     const summary = await tanner.get("/api/rooms/9/summary").expect(200);
@@ -98,12 +103,17 @@ describe("reading rooms", () => {
 
     await tanner.put("/api/rooms/9/membership").send({}).expect(400);
     await tanner.put("/api/rooms/9/membership").send({ password: "wrong" }).expect(403);
-    await tanner.put("/api/rooms/9/membership").send({ password: "hunter22" }).expect(200);
+    await tanner.put("/api/rooms/9/membership").send({ password: TEST_ROOM_PASSWORD }).expect(200);
     await tanner.get("/api/rooms/9").expect(200);
   });
 
   it("lets the creator read their private room", async () => {
-    await seedRoom({ room_number: 9, created_by: "ben", private_room: true, password: "hunter22" });
+    await seedRoom({
+      room_number: 9,
+      created_by: "ben",
+      private_room: true,
+      password: TEST_ROOM_PASSWORD,
+    });
     await ben.get("/api/rooms/9").expect(200);
   });
 
@@ -127,11 +137,6 @@ describe("room lists", () => {
     expect(body.created.map((r: { room_number: number }) => r.room_number)).toEqual([1]);
     expect(body.joined.map((r: { room_number: number }) => r.room_number)).toEqual([2]);
     expect(body.created[0]).not.toHaveProperty("messageHistory");
-  });
-
-  it("GET /api/rooms/explore lists only rooms the user hasn't created or joined", async () => {
-    const { body } = await tanner.get("/api/rooms/explore").expect(200);
-    expect(body.map((r: { room_number: number }) => r.room_number)).toEqual([3]);
   });
 
   it("joining twice doesn't duplicate the room", async () => {
