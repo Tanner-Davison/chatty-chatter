@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Attachment, ChatMessage } from "@chatty/shared";
+import type { Attachment, ChatMessage, Gif } from "@chatty/shared";
 import { chatReducer, type ChatEntry } from "./chatReducer";
 import { roomKeys } from "../rooms/api";
 import { useSocket } from "./socketContext";
@@ -86,10 +86,15 @@ export function useChatRoom(
   }, [socket, room]);
 
   const send = useCallback(
-    (text: string, attachments: Attachment[] = []) => {
+    (text: string, attachments: Attachment[] = [], gif?: Gif) => {
       const tempId = `temp-${crypto.randomUUID()}`;
-      dispatch({ type: "sending", tempId, sentBy: username, text, attachments });
-      const payload = { room, message: text, ...(attachments.length > 0 && { attachments }) };
+      dispatch({ type: "sending", tempId, sentBy: username, text, attachments, gif });
+      const payload = {
+        room,
+        message: text,
+        ...(attachments.length > 0 && { attachments }),
+        ...(gif && { gif }),
+      };
       socket.timeout(10_000).emit("send_message", payload, (err, res) => {
         if (err || !res.ok) dispatch({ type: "failed", tempId });
         else dispatch({ type: "sent", tempId, message: res.data });

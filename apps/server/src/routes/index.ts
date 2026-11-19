@@ -7,6 +7,7 @@ import {
   type ChatImageStore,
   type ImageUploader,
 } from "../lib/cloudinary";
+import type { GifSearch } from "../lib/gifs";
 import { badRequest } from "../lib/http-error";
 import type { LinkPreviewer } from "../lib/link-preview";
 import type { Mailer } from "../lib/mailer";
@@ -16,6 +17,7 @@ import { createAuthController } from "../controllers/auth.controller";
 import { createDiscoverController } from "../controllers/discover.controller";
 import { createLinkPreviewController } from "../controllers/link-preview.controller";
 import { createFriendController } from "../controllers/friend.controller";
+import { createGifController } from "../controllers/gif.controller";
 import { createInviteController } from "../controllers/invite.controller";
 import * as notifications from "../controllers/notification.controller";
 import * as rooms from "../controllers/room.controller";
@@ -29,11 +31,12 @@ export interface ApiDeps {
   notifier: Notifier;
   mailer: Mailer;
   linkPreviewer: LinkPreviewer;
+  gifSearch: GifSearch;
 }
 
 export function createApiRouter(
   env: Env,
-  { uploadImage, presence, linkPreviewer, chatImages, notifier, mailer }: ApiDeps,
+  { uploadImage, presence, linkPreviewer, chatImages, notifier, mailer, gifSearch }: ApiDeps,
 ): Router {
   const auth = createAuthController(env, uploadImage, mailer);
   const discover = createDiscoverController(presence);
@@ -106,6 +109,15 @@ export function createApiRouter(
     message: { error: "Too many previews. Slow down a little." },
   });
   router.get("/link-preview", authed, previewLimiter, createLinkPreviewController(linkPreviewer));
+
+  const gifLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    limit: env.NODE_ENV === "test" ? 1000 : 60,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: "Too many GIF searches. Slow down a little." },
+  });
+  router.get("/gifs", authed, gifLimiter, createGifController(gifSearch));
 
   const uploadLimiter = rateLimit({
     windowMs: 60 * 1000,

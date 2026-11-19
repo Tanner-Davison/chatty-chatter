@@ -21,6 +21,10 @@ const envSchema = z
     /** Without it, emails are written to the server log instead of sent. */
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().default("Chatty Chatter <noreply@mail.chattychatter.com>"),
+    /** GIPHY API key for the GIF picker; without it, GIFs are unavailable. */
+    GIPHY_API_KEY: z.string().optional(),
+    /** Highest GIPHY content rating to show: g, pg, pg-13 or r. */
+    GIPHY_RATING: z.enum(["g", "pg", "pg-13", "r"]).default("pg-13"),
     /** Where emailed links point. */
     APP_URL: z.url().default("https://chattychatter.com"),
   })

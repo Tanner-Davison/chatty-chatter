@@ -87,10 +87,11 @@ export async function notifyMentions(
       roomName: room?.room_name ?? undefined,
       messageId: message._id!,
       sentBy: message.sentBy,
-      preview: messagePreview(message.message, Boolean(message.attachments?.length)).slice(
-        0,
-        PREVIEW_LENGTH,
-      ),
+      preview: messagePreview(
+        message.message,
+        Boolean(message.attachments?.length),
+        Boolean(message.gif),
+      ).slice(0, PREVIEW_LENGTH),
     })),
   );
   return docs.map((d) => ({

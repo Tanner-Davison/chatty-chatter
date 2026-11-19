@@ -5,6 +5,7 @@ import helmet from "helmet";
 import { isAllowedOrigin, type Env } from "./config/env";
 import { unavailableImageStore, type ChatImageStore, type ImageUploader } from "./lib/cloudinary";
 import { createLinkPreviewer, type LinkPreviewer } from "./lib/link-preview";
+import { createGiphySearch, type GifSearch } from "./lib/gifs";
 import { createMailer, type Mailer } from "./lib/mailer";
 import { noNotifier, type Notifier } from "./lib/notifier";
 import { noPresence, type Presence } from "./lib/presence";
@@ -24,6 +25,8 @@ export interface AppDeps {
   notifier?: Notifier;
   /** Sends account emails; defaults to Resend (or the log without a key). */
   mailer?: Mailer;
+  /** Finds GIFs for the picker; defaults to GIPHY (unavailable without a key). */
+  gifSearch?: GifSearch;
 }
 
 /** Builds the Express app without listening, so tests can drive it with supertest. */
@@ -35,6 +38,7 @@ export function createApp({
   chatImages = unavailableImageStore,
   notifier = noNotifier,
   mailer = env.NODE_ENV === "test" ? { send: async () => {} } : createMailer(env),
+  gifSearch = createGiphySearch(env),
 }: AppDeps): Express {
   const app = express();
 
@@ -57,7 +61,15 @@ export function createApp({
   });
   app.use(
     "/api",
-    createApiRouter(env, { uploadImage, presence, linkPreviewer, chatImages, notifier, mailer }),
+    createApiRouter(env, {
+      uploadImage,
+      presence,
+      linkPreviewer,
+      chatImages,
+      notifier,
+      mailer,
+      gifSearch,
+    }),
   );
 
   app.use(notFoundHandler);

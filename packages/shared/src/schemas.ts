@@ -116,14 +116,30 @@ export const attachmentSchema = z.object({
   height: z.number().int().positive().max(20_000).optional(),
 });
 
+/** GIPHY serves GIFs from these hosts; nothing else may be embedded as a GIF. */
+export const isGiphyMediaUrl = (url: string) =>
+  /^https:\/\/(media\d*|i)\.giphy\.com\/[^\s]*$/.test(url);
+
+export const gifSchema = z.object({
+  id: z.string().min(1).max(100),
+  url: z
+    .url({ protocol: /^https$/ })
+    .max(500)
+    .refine(isGiphyMediaUrl, "GIFs must come from GIPHY"),
+  width: z.number().int().positive().max(2000),
+  height: z.number().int().positive().max(2000),
+  title: z.string().max(200).optional(),
+});
+
 export const sendMessageSchema = z
   .object({
     room: roomNumberSchema,
     message: z.string().trim().max(MESSAGE_MAX_LENGTH).default(""),
     attachments: z.array(attachmentSchema).max(MAX_ATTACHMENTS).optional(),
+    gif: gifSchema.optional(),
   })
-  .refine((m) => m.message.length > 0 || (m.attachments?.length ?? 0) > 0, {
-    message: "A message needs text or a photo",
+  .refine((m) => m.message.length > 0 || (m.attachments?.length ?? 0) > 0 || m.gif, {
+    message: "A message needs text, a photo or a GIF",
   });
 export type SendMessageInput = z.input<typeof sendMessageSchema>;
 
@@ -168,6 +184,12 @@ export type HideLinkPreviewInput = MessageRef;
 
 export const linkPreviewQuerySchema = z.object({
   url: z.url({ protocol: /^https?$/ }).max(2000),
+});
+
+export const gifSearchQuerySchema = z.object({
+  /** Empty for trending GIFs. */
+  q: z.string().trim().max(100).default(""),
+  offset: z.coerce.number().int().min(0).max(4999).default(0),
 });
 
 export const markNotificationsReadSchema = z.object({
