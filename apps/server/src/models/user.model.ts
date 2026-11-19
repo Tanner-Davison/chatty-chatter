@@ -9,6 +9,12 @@ const userSchema = new Schema(
     // email existed have none until they add one.
     email: { type: String, lowercase: true, trim: true },
     emailVerified: { type: Boolean, default: false },
+    // Alert emails: on unless turned off; sent only to a verified email.
+    emailAlerts: { type: Boolean, default: true },
+    /** When the last alert email went out. */
+    alertEmailedAt: Date,
+    /** When the user last had the app open (set as they leave). */
+    lastActiveAt: Date,
     profilePic: {
       url: String,
       cloudinary_id: String,

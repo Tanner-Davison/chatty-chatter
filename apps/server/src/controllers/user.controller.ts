@@ -18,6 +18,9 @@ export const getProfile: RequestHandler = async (req, res) => {
     delete profile.email;
     delete profile.emailVerified;
     delete profile.lastSeen;
+    delete profile.emailAlerts;
+    delete profile.alertEmailedAt;
+    delete profile.lastActiveAt;
   }
   res.json(profile);
 };

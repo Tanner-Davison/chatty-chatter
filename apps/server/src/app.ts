@@ -8,6 +8,7 @@ import { createLinkPreviewer, type LinkPreviewer } from "./lib/link-preview";
 import { createMailer, type Mailer } from "./lib/mailer";
 import { noNotifier, type Notifier } from "./lib/notifier";
 import { noPresence, type Presence } from "./lib/presence";
+import { noPusher, type Pusher } from "./lib/push";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { createApiRouter } from "./routes";
 
@@ -24,6 +25,8 @@ export interface AppDeps {
   notifier?: Notifier;
   /** Sends account emails; defaults to Resend (or the log without a key). */
   mailer?: Mailer;
+  /** Sends pop-up alerts; defaults to none (tests). */
+  pusher?: Pusher;
 }
 
 /** Builds the Express app without listening, so tests can drive it with supertest. */
@@ -35,6 +38,7 @@ export function createApp({
   chatImages = unavailableImageStore,
   notifier = noNotifier,
   mailer = env.NODE_ENV === "test" ? { send: async () => {} } : createMailer(env),
+  pusher = noPusher,
 }: AppDeps): Express {
   const app = express();
 
@@ -57,7 +61,15 @@ export function createApp({
   });
   app.use(
     "/api",
-    createApiRouter(env, { uploadImage, presence, linkPreviewer, chatImages, notifier, mailer }),
+    createApiRouter(env, {
+      uploadImage,
+      presence,
+      linkPreviewer,
+      chatImages,
+      notifier,
+      mailer,
+      pusher,
+    }),
   );
 
   app.use(notFoundHandler);

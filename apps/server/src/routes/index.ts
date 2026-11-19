@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import type { Env } from "../config/env";
 import {
@@ -12,6 +12,8 @@ import type { LinkPreviewer } from "../lib/link-preview";
 import type { Mailer } from "../lib/mailer";
 import type { Notifier } from "../lib/notifier";
 import type { Presence } from "../lib/presence";
+import type { Pusher } from "../lib/push";
+import { createAlertController } from "../controllers/alert.controller";
 import { createAuthController } from "../controllers/auth.controller";
 import { createDiscoverController } from "../controllers/discover.controller";
 import { createLinkPreviewController } from "../controllers/link-preview.controller";
@@ -29,16 +31,18 @@ export interface ApiDeps {
   notifier: Notifier;
   mailer: Mailer;
   linkPreviewer: LinkPreviewer;
+  pusher: Pusher;
 }
 
 export function createApiRouter(
   env: Env,
-  { uploadImage, presence, linkPreviewer, chatImages, notifier, mailer }: ApiDeps,
+  { uploadImage, presence, linkPreviewer, chatImages, notifier, mailer, pusher }: ApiDeps,
 ): Router {
   const auth = createAuthController(env, uploadImage, mailer);
   const discover = createDiscoverController(presence);
   const friends = createFriendController(notifier);
   const invites = createInviteController(notifier);
+  const alerts = createAlertController(env, pusher);
   const authed = requireAuth(env);
   const router = Router();
 
@@ -97,6 +101,16 @@ export function createApiRouter(
   router.post("/notifications/read", authed, notifications.markRead);
   router.delete("/notifications", authed, notifications.clearNotifications);
   router.delete("/notifications/:id", authed, notifications.deleteNotification);
+  router.put("/users/me/alerts", authed, alerts.updateSettings);
+  router.get("/push/config", alerts.pushConfig);
+  router.post("/push/subscriptions", authed, alerts.subscribe);
+  router.delete("/push/subscriptions", authed, alerts.unsubscribePush);
+  router.post(
+    "/alerts/unsubscribe",
+    authLimiter,
+    express.urlencoded({ extended: false, limit: "1kb" }),
+    alerts.unsubscribeEmail,
+  );
 
   const previewLimiter = rateLimit({
     windowMs: 60 * 1000,
