@@ -15,7 +15,7 @@ import { Avatar, Menu, type MenuItem } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { timeAgo } from "../../lib/format";
 import { useUserProfile } from "../profile/api";
-import { COVER_TEXT_SCRIM, HubCoverBackdrop } from "./HubCoverBackdrop";
+import { HubCoverBackdrop } from "./HubCoverBackdrop";
 
 export type RoomKind = "subscribed" | "public" | "private";
 
@@ -111,42 +111,40 @@ export function RoomCard({ room, kind, onHide, onLeave, onDelete }: RoomCardProp
           />
         </div>
 
-        <div
-          className={cn(
-            "relative flex min-w-0 flex-col items-center gap-0.5 text-center",
-            room.cover_image && COVER_TEXT_SCRIM,
-          )}
-        >
-          <p className="line-clamp-2 font-display text-sm font-semibold break-words text-fg capitalize">
-            {name}
-          </p>
-          {room.lastMessage?.message && (
-            <p
-              className={cn(
-                "w-full truncate text-[11px]",
-                hasNews || room.cover_image ? "text-fg" : "text-fg/60",
-              )}
-            >
-              <span className="font-semibold">@{room.lastMessage.sentBy}</span>{" "}
-              {room.lastMessage.message}
+        {/* With a cover the photo stays clear; the name moves down into the strip. */}
+        {!room.cover_image && (
+          <div className="relative flex min-w-0 flex-col items-center gap-0.5 text-center">
+            <p className="line-clamp-2 font-display text-sm font-semibold break-words text-fg capitalize">
+              {name}
             </p>
-          )}
-        </div>
+            {room.lastMessage?.message && (
+              <p className={cn("w-full truncate text-[11px]", hasNews ? "text-fg" : "text-fg/60")}>
+                <span className="font-semibold">@{room.lastMessage.sentBy}</span>{" "}
+                {room.lastMessage.message}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div
         className={cn(
-          "flex items-center justify-between px-3 pb-3 text-[11px] text-fg/70",
-          room.cover_image && "rounded-b-tile border-t border-line bg-surface-raised pt-2 pb-2",
+          "flex flex-col gap-0.5 px-3 pb-3 text-[11px] text-fg/70",
+          room.cover_image && "rounded-b-tile border-t border-line bg-surface-raised pt-2 pb-2.5",
         )}
       >
-        <span title={new Date(room.lastActiveAt).toLocaleString()}>
-          {timeAgo(room.lastActiveAt)}
-        </span>
-        <span className="flex items-center gap-1">
-          {room.private_room ? <Lock className="size-3" /> : <Users className="size-3" />}
-          {room.users_in_room.length}
-        </span>
+        {room.cover_image && (
+          <p className="truncate font-display text-sm font-semibold text-fg capitalize">{name}</p>
+        )}
+        <div className="flex items-center justify-between">
+          <span title={new Date(room.lastActiveAt).toLocaleString()}>
+            {timeAgo(room.lastActiveAt)}
+          </span>
+          <span className="flex items-center gap-1">
+            {room.private_room ? <Lock className="size-3" /> : <Users className="size-3" />}
+            {room.users_in_room.length}
+          </span>
+        </div>
       </div>
     </div>
   );
