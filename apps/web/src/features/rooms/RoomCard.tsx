@@ -15,7 +15,7 @@ import { Avatar, Menu, type MenuItem } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { timeAgo } from "../../lib/format";
 import { useUserProfile } from "../profile/api";
-import { HubCoverBackdrop } from "./HubCoverBackdrop";
+import { COVER_TEXT_SCRIM, HubCoverBackdrop } from "./HubCoverBackdrop";
 
 export type RoomKind = "subscribed" | "public" | "private";
 
@@ -111,12 +111,22 @@ export function RoomCard({ room, kind, onHide, onLeave, onDelete }: RoomCardProp
           />
         </div>
 
-        <div className="relative flex min-w-0 flex-col items-center gap-0.5 text-center">
+        <div
+          className={cn(
+            "relative flex min-w-0 flex-col items-center gap-0.5 text-center",
+            room.cover_image && COVER_TEXT_SCRIM,
+          )}
+        >
           <p className="line-clamp-2 font-display text-sm font-semibold break-words text-fg capitalize">
             {name}
           </p>
           {room.lastMessage?.message && (
-            <p className={cn("w-full truncate text-[11px]", hasNews ? "text-fg" : "text-fg/60")}>
+            <p
+              className={cn(
+                "w-full truncate text-[11px]",
+                hasNews || room.cover_image ? "text-fg" : "text-fg/60",
+              )}
+            >
               <span className="font-semibold">@{room.lastMessage.sentBy}</span>{" "}
               {room.lastMessage.message}
             </p>

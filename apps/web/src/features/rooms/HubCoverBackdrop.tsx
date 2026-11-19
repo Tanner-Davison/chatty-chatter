@@ -9,6 +9,12 @@ function categoryHue(category: string | undefined): number {
   return Math.abs(hash) % 360;
 }
 
+/**
+ * A dark pane behind text that sits on an owner's photo, so it stays readable
+ * however bright the picture is (and when hovering lifts the dimming).
+ */
+export const COVER_TEXT_SCRIM = "rounded-lg bg-ink-950/70 px-2 py-1 backdrop-blur-sm";
+
 interface HubCoverBackdropProps {
   cover: HubCover | undefined;
   category?: string | undefined;

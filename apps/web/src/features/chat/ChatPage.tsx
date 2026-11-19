@@ -14,7 +14,7 @@ import type { Room } from "@chatty/shared";
 import { Badge, Button, ConfirmDialog, LoadingBlock, Panel, StatusDot } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { useCurrentUser } from "../auth/currentUser";
-import { HubCoverBackdrop } from "../rooms/HubCoverBackdrop";
+import { COVER_TEXT_SCRIM, HubCoverBackdrop } from "../rooms/HubCoverBackdrop";
 import { useJoinRoom, useLeaveRoom, useMyRooms, useRoom } from "../rooms/api";
 import { ChatSettings } from "./ChatSettings";
 import { InviteSheet } from "./InviteSheet";
@@ -218,7 +218,12 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
         >
           <span className="hidden sm:inline">Chat-Hubs</span>
         </Button>
-        <div className="min-w-0 flex-1">
+        <div
+          className={cn(
+            "min-w-0",
+            room.cover_image ? cn(COVER_TEXT_SCRIM, "mr-auto px-3 py-1.5") : "flex-1",
+          )}
+        >
           <h1 className="truncate font-display text-xl font-semibold capitalize">
             {room.room_name ?? `Hub #${room.room_number}`}
           </h1>
