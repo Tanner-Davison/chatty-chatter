@@ -91,6 +91,11 @@ export const inviteCodeSchema = z
 export const inviteCodeParamsSchema = z.object({ code: inviteCodeSchema });
 
 export const addMemberSchema = z.object({ username: usernameSchema });
+
+/** Where a hub's cover sits vertically, 0 (top) to 100 (bottom). */
+export const hubCoverFocusSchema = z.object({
+  focus: z.number().min(0).max(100),
+});
 export type AddMemberInput = z.infer<typeof addMemberSchema>;
 
 export const searchRoomsQuerySchema = z.object({

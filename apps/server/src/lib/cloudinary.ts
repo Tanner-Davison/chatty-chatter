@@ -67,6 +67,15 @@ export const unavailableImageStore: ChatImageStore = {
 };
 
 export function createCloudinaryChatImages(env: Env): ChatImageStore {
+  return createCloudinaryImageStore(env, CHAT_FOLDER);
+}
+
+/** Hub cover photos, kept apart from chat photos. */
+export function createCloudinaryHubCovers(env: Env): ChatImageStore {
+  return createCloudinaryImageStore(env, "hub_covers");
+}
+
+function createCloudinaryImageStore(env: Env, folder: string): ChatImageStore {
   cloudinary.config({
     cloud_name: env.CLOUD_NAME,
     api_key: env.CLOUDINARY_API_KEY,
@@ -79,10 +88,10 @@ export function createCloudinaryChatImages(env: Env): ChatImageStore {
         cloudinary.uploader
           .upload_stream(
             {
-              folder: CHAT_FOLDER,
+              folder,
               resource_type: "image",
               // The account's default preset crops uploads into round 190px
-              // avatars; chat photos must keep their real size and shape.
+              // avatars; these photos must keep their real size and shape.
               upload_preset: "ml_default",
             },
             (error, result) => {
@@ -100,7 +109,7 @@ export function createCloudinaryChatImages(env: Env): ChatImageStore {
     remove: async (ids) => {
       if (ids.length === 0) return;
       await cloudinary.api.delete_resources(ids).catch((err: unknown) => {
-        console.error("Couldn't remove chat images from Cloudinary", err);
+        console.error(`Couldn't remove images from Cloudinary (${folder})`, err);
       });
     },
   };

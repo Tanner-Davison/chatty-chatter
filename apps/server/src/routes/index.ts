@@ -16,6 +16,7 @@ import type { Presence } from "../lib/presence";
 import type { Pusher } from "../lib/push";
 import { createAlertController } from "../controllers/alert.controller";
 import { createAuthController } from "../controllers/auth.controller";
+import { createCoverController } from "../controllers/cover.controller";
 import { createDiscoverController } from "../controllers/discover.controller";
 import { createLinkPreviewController } from "../controllers/link-preview.controller";
 import { createFriendController } from "../controllers/friend.controller";
@@ -30,6 +31,7 @@ export interface ApiDeps {
   uploadImage: ImageUploader;
   presence: Presence;
   chatImages: ChatImageStore;
+  hubCovers: ChatImageStore;
   notifier: Notifier;
   mailer: Mailer;
   linkPreviewer: LinkPreviewer;
@@ -44,6 +46,7 @@ export function createApiRouter(
     presence,
     linkPreviewer,
     chatImages,
+    hubCovers,
     notifier,
     mailer,
     pusher,
@@ -51,6 +54,7 @@ export function createApiRouter(
   }: ApiDeps,
 ): Router {
   const auth = createAuthController(env, uploadImage, mailer);
+  const covers = createCoverController(hubCovers);
   const discover = createDiscoverController(presence);
   const friends = createFriendController(notifier);
   const invites = createInviteController(notifier);
@@ -103,7 +107,9 @@ export function createApiRouter(
   router.post("/rooms", authed, rooms.createRoom);
   router.put("/rooms/:roomNumber/membership", authed, rooms.joinRoom);
   router.delete("/rooms/:roomNumber/membership", authed, rooms.leaveRoom);
-  router.delete("/rooms/:roomNumber", authed, rooms.deleteRoom);
+  router.delete("/rooms/:roomNumber", authed, covers.deleteRoom);
+  router.patch("/rooms/:roomNumber/cover", authed, covers.reposition);
+  router.delete("/rooms/:roomNumber/cover", authed, covers.remove);
   router.get("/rooms/:roomNumber/invite", authed, invites.getInvite);
   router.post("/rooms/:roomNumber/invite/reset", authed, invites.resetInvite);
   router.post("/rooms/:roomNumber/members", authed, invites.addMember);
@@ -158,6 +164,13 @@ export function createApiRouter(
       if (!req.file) throw badRequest("Attach an image");
       res.status(201).json(await chatImages.upload(req.file));
     },
+  );
+  router.put(
+    "/rooms/:roomNumber/cover",
+    authed,
+    uploadLimiter,
+    chatImageUpload.single("image"),
+    covers.upload,
   );
 
   return router;

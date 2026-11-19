@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import type { Room } from "@chatty/shared";
 import { Badge, Button, ConfirmDialog, LoadingBlock, Panel, StatusDot } from "../../components/ui";
+import { cn } from "../../lib/cn";
 import { useCurrentUser } from "../auth/currentUser";
+import { HubCoverBackdrop } from "../rooms/HubCoverBackdrop";
 import { useJoinRoom, useLeaveRoom, useMyRooms, useRoom } from "../rooms/api";
 import { ChatSettings } from "./ChatSettings";
 import { InviteSheet } from "./InviteSheet";
@@ -200,7 +202,14 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
       )}
       {/* Above the message panel: both are frosted (backdrop-blur), which makes
           each its own layer, so the header's popovers need the header itself on top. */}
-      <Panel className="relative z-20 flex flex-wrap items-center gap-3 px-4 py-3">
+      <Panel
+        className={cn(
+          "relative z-20 flex flex-wrap items-center gap-3 px-4 py-3",
+          room.cover_image && "min-h-28 items-end sm:min-h-36",
+        )}
+      >
+        {/* Behind the header's content, inside the panel's own layer. */}
+        <HubCoverBackdrop cover={room.cover_image} width={1600} className="-z-10 rounded-2xl" />
         <Button
           variant="ghost"
           size="sm"
@@ -213,7 +222,12 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
           <h1 className="truncate font-display text-xl font-semibold capitalize">
             {room.room_name ?? `Hub #${room.room_number}`}
           </h1>
-          <p className="flex flex-wrap items-center gap-2 text-xs text-fg-subtle">
+          <p
+            className={cn(
+              "flex flex-wrap items-center gap-2 text-xs",
+              room.cover_image ? "text-fg/75" : "text-fg-subtle",
+            )}
+          >
             #{room.room_number}
             {room.private_room ? (
               <Badge tone="private">
@@ -237,7 +251,7 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
           </Button>
         )}
         <SubscribeButton room={room} />
-        <ChatSettings roomNumber={room.room_number} />
+        <ChatSettings room={room} isOwner={room.created_by === user.username} />
       </Panel>
 
       <Panel className="relative min-h-0 flex-1">

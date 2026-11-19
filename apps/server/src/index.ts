@@ -2,7 +2,11 @@ import { createServer } from "node:http";
 import mongoose from "mongoose";
 import { createApp } from "./app";
 import { loadEnv } from "./config/env";
-import { createCloudinaryChatImages, createCloudinaryUploader } from "./lib/cloudinary";
+import {
+  createCloudinaryChatImages,
+  createCloudinaryHubCovers,
+  createCloudinaryUploader,
+} from "./lib/cloudinary";
 import { createMailer } from "./lib/mailer";
 import type { Presence } from "./lib/presence";
 import { createPusher } from "./lib/push";
@@ -36,6 +40,7 @@ const app = createApp({
   env,
   uploadImage: createCloudinaryUploader(env),
   chatImages,
+  hubCovers: createCloudinaryHubCovers(env),
   notifier,
   presence,
   mailer,

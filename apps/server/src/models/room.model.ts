@@ -42,6 +42,13 @@ const roomSchema = new Schema(
     first_message: String,
     messageHistory: [messageSchema],
     users_in_room: [String],
+    cover_image: {
+      type: new Schema(
+        { url: String, cloudinary_id: String, focus: { type: Number, default: 50 } },
+        { _id: false },
+      ),
+      default: undefined,
+    },
   },
   {
     toJSON: {

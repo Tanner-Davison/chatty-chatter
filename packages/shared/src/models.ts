@@ -8,6 +8,14 @@ export interface ProfilePic {
   cloudinary_id: string;
 }
 
+/** A hub's cover photo, set by its owner. */
+export interface HubCover {
+  url: string;
+  cloudinary_id: string;
+  /** Vertical focal point as a percentage, for `object-position`. */
+  focus: number;
+}
+
 export interface RoomRef {
   room: number;
   roomName?: string;
@@ -93,6 +101,7 @@ export interface RoomSummary {
   room_category?: string;
   first_message?: string;
   users_in_room: string[];
+  cover_image?: HubCover;
 }
 
 /** A private hub's shareable invite; the link is `/invite/<code>`. */

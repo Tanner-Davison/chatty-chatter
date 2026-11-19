@@ -5,6 +5,7 @@ import type { z } from "zod";
 import type {
   ChatMessage,
   CreateRoomInput,
+  HubCover,
   MyRoom,
   MyRooms,
   Room,
@@ -29,7 +30,19 @@ export const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&
 // Mongo stores missing optional strings as null; the API omits them.
 const opt = <T>(value: T | null | undefined): T | undefined => value ?? undefined;
 
+export interface CoverRecord {
+  url?: string | null;
+  cloudinary_id?: string | null;
+  focus?: number | null;
+}
+
+export function toCover(cover: CoverRecord | null | undefined): HubCover | undefined {
+  if (!cover?.url || !cover.cloudinary_id) return undefined;
+  return { url: cover.url, cloudinary_id: cover.cloudinary_id, focus: cover.focus ?? 50 };
+}
+
 export function toSummary(room: RoomRecord): RoomSummary {
+  const cover = toCover(room.cover_image);
   return {
     _id: room._id.toString(),
     room_number: room.room_number,
@@ -40,6 +53,7 @@ export function toSummary(room: RoomRecord): RoomSummary {
     room_category: opt(room.room_category),
     first_message: opt(room.first_message),
     users_in_room: room.users_in_room ?? [],
+    ...(cover && { cover_image: cover }),
   };
 }
 
@@ -187,6 +201,7 @@ interface ActivityRow {
   room_category?: string | null;
   first_message?: string | null;
   users_in_room?: string[] | null;
+  cover_image?: CoverRecord | null;
   history: { _id?: Types.ObjectId; sentBy?: string | null; timestamp?: string | null }[];
   last?: {
     _id?: Types.ObjectId;
@@ -226,6 +241,7 @@ export async function getMyRooms(username: string): Promise<MyRooms> {
           room_category: 1,
           first_message: 1,
           users_in_room: 1,
+          cover_image: 1,
           history: {
             $map: {
               input: { $ifNull: ["$messageHistory", []] },
@@ -377,7 +393,11 @@ export async function leaveRoom(username: string, roomNumber: number): Promise<v
   ]);
 }
 
-export async function deleteRoom(username: string, roomNumber: number): Promise<void> {
+/** Deletes the hub; returns its cover photo, if any, so the caller can remove the file. */
+export async function deleteRoom(
+  username: string,
+  roomNumber: number,
+): Promise<HubCover | undefined> {
   const room = await findRoomRecord(roomNumber);
   if (room.created_by !== username) throw forbidden("Only the room's creator can delete it");
   await RoomModel.deleteOne({ _id: room._id });
@@ -388,6 +408,54 @@ export async function deleteRoom(username: string, roomNumber: number): Promise<
       { $pull: { roomsJoined: { room: roomNumber } } },
     ),
   ]);
+  return toCover(room.cover_image);
+}
+
+export async function findOwnedRoom(username: string, roomNumber: number): Promise<RoomRecord> {
+  const room = await findRoomRecord(roomNumber);
+  if (room.created_by !== username) throw forbidden("Only the hub's owner can change its cover");
+  return room;
+}
+
+/** Sets a hub's cover; returns the one it replaced, if any, so the caller can remove the file. */
+export async function setCover(
+  username: string,
+  roomNumber: number,
+  image: { url: string; cloudinary_id: string },
+): Promise<{ room: RoomSummary; replaced?: HubCover }> {
+  const room = await findOwnedRoom(username, roomNumber);
+  const cover: HubCover = { url: image.url, cloudinary_id: image.cloudinary_id, focus: 50 };
+  await RoomModel.updateOne({ _id: room._id }, { $set: { cover_image: cover } });
+  return {
+    room: toSummary({ ...room, cover_image: cover }),
+    replaced: toCover(room.cover_image),
+  };
+}
+
+export async function setCoverFocus(
+  username: string,
+  roomNumber: number,
+  focus: number,
+): Promise<RoomSummary> {
+  const room = await findOwnedRoom(username, roomNumber);
+  const cover = toCover(room.cover_image);
+  if (!cover) throw notFound("This hub has no cover photo");
+  const moved = { ...cover, focus: Math.round(focus) };
+  await RoomModel.updateOne({ _id: room._id }, { $set: { "cover_image.focus": moved.focus } });
+  return toSummary({ ...room, cover_image: moved });
+}
+
+/** Clears a hub's cover; returns the removed one so the caller can remove the file. */
+export async function removeCover(
+  username: string,
+  roomNumber: number,
+): Promise<{ room: RoomSummary; removed?: HubCover }> {
+  const room = await findOwnedRoom(username, roomNumber);
+  await RoomModel.updateOne({ _id: room._id }, { $unset: { cover_image: 1 } });
+  return {
+    room: toSummary({ ...room, cover_image: undefined }),
+    removed: toCover(room.cover_image),
+  };
 }
 
 /** Records that the user is in the room; used when their socket joins it. */
