@@ -14,7 +14,7 @@ export interface AlertText {
   tag: string;
 }
 
-const hubName = (n: { room: number; roomName?: string }) => n.roomName ?? `Hub #${n.room}`;
+const hubName = (n: { room: number; roomName?: string }) => n.roomName ?? "a hub";
 
 export function alertText(n: Notification): AlertText {
   switch (n.type) {

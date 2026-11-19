@@ -66,7 +66,8 @@ const roomPasswordSchema = z
   .max(72, "Room password must be at most 72 characters");
 
 const roomBaseSchema = z.object({
-  roomNumber: roomNumberSchema,
+  /** Hubs are found by name; the server picks a number when none is given. */
+  roomNumber: roomNumberSchema.optional(),
   name: z.string().trim().min(1, "Give the room a name").max(50),
   category: z.string().trim().max(30).optional(),
 });

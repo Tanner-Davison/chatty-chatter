@@ -26,7 +26,7 @@ export function AppHeader() {
     { to: `/profile/${user.username}`, label: "Profile", icon: <UserRound /> },
     { to: "/currentservers", label: "Chat-Hubs", icon: <LayoutGrid /> },
     { to: "/explore", label: "Explore", icon: <Compass /> },
-    { to: "/createroom/0", label: "Add-Hub", icon: <PlusSquare />, match: "/createroom" },
+    { to: "/createroom", label: "Add-Hub", icon: <PlusSquare />, match: "/createroom" },
   ];
 
   const onLogout = () => logout.mutate(undefined, { onSettled: () => void navigate("/") });

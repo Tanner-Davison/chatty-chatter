@@ -23,7 +23,7 @@ export function InviteSheet({
         <p className="mt-1 text-sm text-fg-muted">
           Anyone you invite joins{" "}
           <span className="font-medium text-fg capitalize">
-            {room.room_name ?? `Hub #${room.room_number}`}
+            {room.room_name?.trim() || "Untitled hub"}
           </span>{" "}
           without a password, and it shows up in their hubs.
         </p>

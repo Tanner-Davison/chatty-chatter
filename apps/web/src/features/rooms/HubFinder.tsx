@@ -4,14 +4,13 @@ import { Hash, Lock, Search } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { useRoomSearch } from "./api";
 
-/** One search box: a number jumps to that hub, text searches hub names. */
+/** Searches hubs by name. */
 export function HubFinder({ className }: { className?: string }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const trimmed = query.trim();
-  const isNumber = /^\d+$/.test(trimmed);
-  const deferred = useDeferredValue(isNumber ? "" : trimmed);
+  const deferred = useDeferredValue(trimmed);
   const { data: results = [], isFetching } = useRoomSearch(deferred);
 
   const go = (roomNumber: number) => {
@@ -22,14 +21,13 @@ export function HubFinder({ className }: { className?: string }) {
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (isNumber) go(Number(trimmed));
-    else if (results[0]) go(results[0].room_number);
+    if (results[0]) go(results[0].room_number);
   };
 
   return (
     <form role="search" onSubmit={onSubmit} className={cn("relative", className)}>
       <label className="sr-only" htmlFor="hub-finder">
-        Find a hub by name or number
+        Find a hub by name
       </label>
       <Search
         aria-hidden
@@ -44,19 +42,13 @@ export function HubFinder({ className }: { className?: string }) {
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder="Find a hub by name or #"
+        placeholder="Find a hub by name"
         autoComplete="off"
         className="h-10 w-full rounded-xl bg-ink-950/60 pr-3 pl-9 text-sm ring-1 ring-line-strong placeholder:text-fg-subtle focus:ring-2 focus:ring-primary focus:outline-none"
       />
       {open && trimmed && (
         <ul className="absolute top-full right-0 left-0 z-40 mt-1 max-h-72 animate-fade-up overflow-y-auto rounded-xl bg-surface-overlay p-1 shadow-panel ring-1 ring-line-strong">
-          {isNumber ? (
-            <ResultButton
-              onClick={() => go(Number(trimmed))}
-              icon={<Hash />}
-              label={`Go to hub #${trimmed}`}
-            />
-          ) : results.length > 0 ? (
+          {results.length > 0 ? (
             results.map((room) => (
               <ResultButton
                 key={room._id}
@@ -68,8 +60,8 @@ export function HubFinder({ className }: { className?: string }) {
                     <Hash className="text-public" />
                   )
                 }
-                label={room.room_name ?? `Hub #${room.room_number}`}
-                meta={`#${room.room_number}`}
+                label={room.room_name?.trim() || "Untitled hub"}
+                meta={room.room_category}
               />
             ))
           ) : (

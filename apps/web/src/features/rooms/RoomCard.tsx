@@ -39,7 +39,7 @@ export function RoomCard({ room, kind, onHide, onLeave, onDelete }: RoomCardProp
   const navigate = useNavigate();
   const { data: owner } = useUserProfile(room.created_by);
   const open = () => void navigate(`/chatroom/${room.room_number}`);
-  const name = room.room_name?.trim() || `Hub #${room.room_number}`;
+  const name = room.room_name?.trim() || "Untitled hub";
   const hasNews = room.unreadCount > 0 || room.unreadMentions > 0;
 
   const items: MenuItem[] = [
@@ -65,7 +65,7 @@ export function RoomCard({ room, kind, onHide, onLeave, onDelete }: RoomCardProp
       aria-label={`${name}, hub ${room.room_number}${room.private_room ? ", private" : ""}${
         room.unreadCount > 0 ? `, ${room.unreadCount} new messages` : ""
       }${room.unreadMentions > 0 ? `, ${room.unreadMentions} mentions of you` : ""}`}
-      title={`#${room.room_number}`}
+      title={name}
       style={{ "--tile-color": TILE_COLORS[kind] } as CSSProperties}
       className={cn(
         "group tile-checker relative flex aspect-square w-full cursor-pointer flex-col rounded-tile",

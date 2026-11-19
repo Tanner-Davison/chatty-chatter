@@ -14,7 +14,7 @@ function describe(n: Notification) {
         text: (
           <>
             <span className="text-fg-muted">mentioned you in</span>{" "}
-            <span className="font-medium capitalize">{n.roomName ?? `Hub #${n.room}`}</span>
+            <span className="font-medium capitalize">{n.roomName ?? "a hub"}</span>
           </>
         ),
         detail: n.preview,
@@ -42,7 +42,7 @@ function describe(n: Notification) {
         text: (
           <>
             <span className="text-fg-muted">added you to</span>{" "}
-            <span className="font-medium capitalize">{n.roomName ?? `Hub #${n.room}`}</span>
+            <span className="font-medium capitalize">{n.roomName ?? "a hub"}</span>
           </>
         ),
         detail: "It's in your hubs now",

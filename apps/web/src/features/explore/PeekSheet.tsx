@@ -49,7 +49,7 @@ function PeekContent({
 }) {
   const navigate = useNavigate();
   const { data: owner } = useUserProfile(room.created_by);
-  const name = room.room_name?.trim() || `Hub #${room.room_number}`;
+  const name = room.room_name?.trim() || "Untitled hub";
 
   const stats = [
     { icon: <Users />, label: "Members", value: room.users_in_room.length },
@@ -80,7 +80,6 @@ function PeekContent({
             <Badge tone="public">Public</Badge>
           )}
           <Badge>{room.room_category ?? "General"}</Badge>
-          <Badge>#{room.room_number}</Badge>
           {room.onlineCount > 0 && (
             <Badge tone="public">
               <span className="size-1.5 animate-pulse rounded-full bg-public" /> {room.onlineCount}{" "}

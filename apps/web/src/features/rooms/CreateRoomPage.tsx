@@ -1,35 +1,20 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router";
-import { Check, Globe, Hash, KeyRound, Link2, Lock, Search, Shapes, Type } from "lucide-react";
+import { useNavigate } from "react-router";
+import { Check, Globe, KeyRound, Link2, Lock, Shapes, Type } from "lucide-react";
 import { createRoomSchema, ROOM_CATEGORIES, type CreateRoomInput } from "@chatty/shared";
-import { Badge, Button, Field, Input, Panel, PasswordInput, Select } from "../../components/ui";
-import { ApiRequestError } from "../../lib/api";
+import { Button, Field, Input, Panel, PasswordInput, Select } from "../../components/ui";
 import { cn } from "../../lib/cn";
-import { isRoomNumberAvailable, useCreateRoom } from "./api";
+import { useCreateRoom } from "./api";
 
 /** How people get into a private hub. */
 type PrivateAccess = "invite" | "password";
 
-type Errors = Partial<Record<"roomNumber" | "name" | "category" | "password" | "_", string>>;
-
-/** Private hubs get a random 7-digit number, as before. */
-async function pickPrivateRoomNumber(): Promise<number> {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const candidate = 1_000_000 + Math.floor(Math.random() * 1_000_000);
-    if (await isRoomNumberAvailable(candidate)) return candidate;
-  }
-  throw new Error("Couldn't find a free hub number. Try again.");
-}
+type Errors = Partial<Record<"name" | "category" | "password" | "_", string>>;
 
 export function CreateRoomPage() {
-  const routeNumber = Number(useParams().room) || 0;
   const navigate = useNavigate();
   const create = useCreateRoom();
   const [isPrivate, setIsPrivate] = useState(false);
-  const [roomNumber, setRoomNumber] = useState(routeNumber ? String(routeNumber) : "");
-  const [availability, setAvailability] = useState<"unknown" | "checking" | "free" | "taken">(
-    routeNumber ? "free" : "unknown",
-  );
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [access, setAccess] = useState<PrivateAccess>("invite");
@@ -37,20 +22,11 @@ export function CreateRoomPage() {
   const [errors, setErrors] = useState<Errors>({});
   const needsPassword = isPrivate && access === "password";
 
-  const checkNumber = async () => {
-    const n = Number(roomNumber);
-    if (!Number.isSafeInteger(n) || n <= 0)
-      return setErrors({ roomNumber: "Enter a positive whole number" });
-    setAvailability("checking");
-    setAvailability((await isRoomNumberAvailable(n)) ? "free" : "taken");
-  };
-
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setErrors({});
     try {
       const draft = {
-        roomNumber: isPrivate ? await pickPrivateRoomNumber() : Number(roomNumber),
         name,
         category: category || undefined,
         isPrivate,
@@ -66,13 +42,7 @@ export function CreateRoomPage() {
       const room = await create.mutateAsync(parsed.data satisfies CreateRoomInput);
       void navigate(`/chatroom/${room.room_number}`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
-      setErrors(
-        err instanceof ApiRequestError && err.status === 409
-          ? { roomNumber: message }
-          : { _: message },
-      );
-      if (err instanceof ApiRequestError && err.status === 409) setAvailability("taken");
+      setErrors({ _: err instanceof Error ? err.message : "Something went wrong" });
     }
   };
 
@@ -133,47 +103,6 @@ export function CreateRoomPage() {
       )}
 
       <form onSubmit={submit} className="mt-6 flex flex-col gap-5" noValidate>
-        {!isPrivate && (
-          <Field
-            label="Hub number"
-            icon={<Hash className="size-3.5" />}
-            error={errors.roomNumber}
-            hint={
-              availability === "free" ? (
-                <Badge tone="public">
-                  <Check /> #{roomNumber} is available
-                </Badge>
-              ) : availability === "taken" ? (
-                <span className="text-danger">#{roomNumber} is taken. Try another number.</span>
-              ) : (
-                "Pick any number people can use to find your hub."
-              )
-            }
-          >
-            {(props) => (
-              <div className="flex gap-2">
-                <Input
-                  {...props}
-                  inputMode="numeric"
-                  value={roomNumber}
-                  onChange={(e) => {
-                    setRoomNumber(e.target.value.replace(/\D/g, ""));
-                    setAvailability("unknown");
-                  }}
-                  placeholder="e.g. 4242"
-                />
-                <Button
-                  onClick={() => void checkNumber()}
-                  loading={availability === "checking"}
-                  icon={<Search className="size-4" />}
-                >
-                  Check
-                </Button>
-              </div>
-            )}
-          </Field>
-        )}
-
         <Field label="Hub name" icon={<Type className="size-3.5" />} error={errors.name}>
           {(props) => (
             <Input
@@ -222,7 +151,6 @@ export function CreateRoomPage() {
           size="lg"
           variant={isPrivate ? "private" : "public"}
           loading={create.isPending}
-          disabled={!isPrivate && availability === "taken"}
         >
           Create{" "}
           {!isPrivate ? "public" : access === "invite" ? "invite-only" : "password-protected"} hub
