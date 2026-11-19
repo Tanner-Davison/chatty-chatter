@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { CheckCircle2, KeyRound, XCircle } from "lucide-react";
 import { resetPasswordSchema } from "@chatty/shared";
 import { Button, Field, LoadingBlock, Logo, Panel, PasswordInput } from "../../components/ui";
+import { useUnsubscribe } from "../notifications/alerts";
 import { useMe, useResetPassword, useVerifyEmail } from "./api";
 
 /** Centered card layout for the pages people reach from emailed links. */
@@ -134,6 +135,50 @@ export function ResetPasswordPage() {
           Save new password
         </Button>
       </form>
+    </LinkPage>
+  );
+}
+
+/** /unsubscribe?token=… — the link at the bottom of alert emails. Works logged out. */
+export function UnsubscribePage() {
+  const token = useSearchParams()[0].get("token") ?? "";
+  const unsubscribe = useUnsubscribe();
+  const { data: me } = useMe();
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (started.current || !token) return;
+    started.current = true;
+    unsubscribe.mutate(token);
+  }, [token, unsubscribe]);
+
+  return (
+    <LinkPage>
+      {unsubscribe.isPending || (token && unsubscribe.isIdle) ? (
+        <LoadingBlock label="Turning off alert emails" />
+      ) : unsubscribe.isSuccess ? (
+        <Outcome ok title="Alert emails are off">
+          <p className="text-sm text-fg-muted">
+            You won't get any more. Turn them back on anytime from your notifications page.
+          </p>
+          <Link
+            to={me ? "/notifications" : "/"}
+            className="mt-2 font-medium text-primary hover:underline"
+          >
+            {me ? "Go to notifications" : "Log in"}
+          </Link>
+        </Outcome>
+      ) : (
+        <Outcome ok={false} title="Couldn't unsubscribe">
+          <p className="text-sm text-fg-muted">
+            {unsubscribe.error?.message ?? "This link is incomplete."} You can turn alert emails off
+            from your notifications page.
+          </p>
+          <Link to="/notifications" className="mt-2 font-medium text-primary hover:underline">
+            Go to notifications
+          </Link>
+        </Outcome>
+      )}
     </LinkPage>
   );
 }
