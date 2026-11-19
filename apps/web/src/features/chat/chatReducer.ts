@@ -1,4 +1,4 @@
-import type { Attachment, ChatMessage } from "@chatty/shared";
+import type { Attachment, ChatMessage, Gif } from "@chatty/shared";
 
 export interface ChatEntry extends ChatMessage {
   /** Stable React key: the message id, or a temporary id while sending. */
@@ -9,7 +9,14 @@ export interface ChatEntry extends ChatMessage {
 export type ChatAction =
   | { type: "loaded"; messages: ChatMessage[] }
   | { type: "received"; message: ChatMessage }
-  | { type: "sending"; tempId: string; sentBy: string; text: string; attachments?: Attachment[] }
+  | {
+      type: "sending";
+      tempId: string;
+      sentBy: string;
+      text: string;
+      attachments?: Attachment[];
+      gif?: Gif;
+    }
   | { type: "sent"; tempId: string; message: ChatMessage }
   | { type: "failed"; tempId: string }
   | { type: "previewHidden"; messageId: string }
@@ -39,6 +46,7 @@ export function chatReducer(state: ChatEntry[], action: ChatAction): ChatEntry[]
           message: action.text,
           sentBy: action.sentBy,
           ...(action.attachments?.length && { attachments: action.attachments }),
+          ...(action.gif && { gif: action.gif }),
           timestamp: new Date().toISOString(),
           status: "pending",
         },

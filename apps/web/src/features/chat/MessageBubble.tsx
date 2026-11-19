@@ -105,6 +105,18 @@ export function MessageBubble({
             {message.attachments && message.attachments.length > 0 && (
               <PhotoGrid photos={message.attachments} alignEnd={isOwn} />
             )}
+            {message.gif && (
+              <img
+                src={message.gif.url}
+                // Reserve the GIF's shape so the chat doesn't jump while it loads.
+                width={message.gif.width}
+                height={message.gif.height}
+                alt={message.gif.title || "GIF"}
+                title={message.gif.title}
+                loading="lazy"
+                className="block h-auto max-h-60 w-auto max-w-full rounded-xl bg-surface-raised ring-1 ring-line"
+              />
+            )}
           </div>
           {onDelete && (
             // Slack-style hover toolbar beside the bubble; also shows on keyboard focus.

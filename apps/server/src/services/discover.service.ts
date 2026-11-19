@@ -25,7 +25,12 @@ interface ActivityRecord {
   messageCount: number;
   recentMessageCount: number;
   memberCount: number;
-  last?: { message?: string | null; sentBy?: string | null; attachments?: unknown[] | null } | null;
+  last?: {
+    message?: string | null;
+    sentBy?: string | null;
+    attachments?: unknown[] | null;
+    gif?: unknown;
+  } | null;
   lastActiveAt: Date;
   createdAt: Date;
 }
@@ -111,7 +116,11 @@ function toDiscoverRoom(
     ...(!isPrivate &&
       r.last && {
         lastMessage: {
-          message: messagePreview(r.last.message ?? "", Boolean(r.last.attachments?.length)),
+          message: messagePreview(
+            r.last.message ?? "",
+            Boolean(r.last.attachments?.length),
+            Boolean(r.last.gif),
+          ),
           sentBy: r.last.sentBy ?? "",
         },
       }),
