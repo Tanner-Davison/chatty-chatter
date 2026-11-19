@@ -5,7 +5,13 @@ import { notFound } from "../lib/http-error";
 import type { Presence } from "../lib/presence";
 import { RoomModel } from "../models/room.model";
 import { UserModel } from "../models/user.model";
-import { escapeRegex, joinedRoomNumbers, toMessage } from "./room.service";
+import {
+  escapeRegex,
+  joinedRoomNumbers,
+  toCover,
+  toMessage,
+  type CoverRecord,
+} from "./room.service";
 
 const DISCOVER_LIMIT = 60;
 const FRIENDS_LIMIT = 12;
@@ -22,6 +28,7 @@ interface ActivityRecord {
   room_category?: string | null;
   first_message?: string | null;
   users_in_room?: string[] | null;
+  cover_image?: CoverRecord | null;
   messageCount: number;
   recentMessageCount: number;
   memberCount: number;
@@ -61,6 +68,7 @@ function activityPipeline(
         room_category: 1,
         first_message: 1,
         users_in_room: 1,
+        cover_image: 1,
         messageCount: { $size: history },
         recentMessageCount: {
           $size: { $filter: { input: history, cond: { $gte: ["$$this._id", since] } } },
@@ -92,6 +100,7 @@ function toDiscoverRoom(
 ): DiscoverRoom {
   const isPrivate = Boolean(r.private_room);
   const members = r.users_in_room ?? [];
+  const cover = toCover(r.cover_image);
   return {
     _id: r._id.toString(),
     room_number: r.room_number,
@@ -102,6 +111,8 @@ function toDiscoverRoom(
     room_category: r.room_category ?? undefined,
     first_message: r.first_message ?? undefined,
     users_in_room: members,
+    // Private hubs show their cover too: it advertises the hub without revealing what's inside.
+    ...(cover && { cover_image: cover }),
     createdAt: r.createdAt.toISOString(),
     lastActiveAt: r.lastActiveAt.toISOString(),
     messageCount: r.messageCount,

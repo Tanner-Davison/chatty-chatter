@@ -15,6 +15,7 @@ import { Avatar, Menu, type MenuItem } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { timeAgo } from "../../lib/format";
 import { useUserProfile } from "../profile/api";
+import { HubCoverBackdrop } from "./HubCoverBackdrop";
 
 export type RoomKind = "subscribed" | "public" | "private";
 
@@ -67,7 +68,7 @@ export function RoomCard({ room, kind, onHide, onLeave, onDelete }: RoomCardProp
       title={`#${room.room_number}`}
       style={{ "--tile-color": TILE_COLORS[kind] } as CSSProperties}
       className={cn(
-        "group tile-checker relative flex aspect-square w-full cursor-pointer flex-col justify-between rounded-tile p-3",
+        "group tile-checker relative flex aspect-square w-full cursor-pointer flex-col rounded-tile",
         "ring-1 ring-[color-mix(in_oklab,var(--tile-color)_45%,transparent)] transition duration-200",
         "hover:-translate-y-1 hover:shadow-[0_0_0_1px_var(--tile-color),0_12px_32px_-8px_var(--tile-color)]",
         "focus-visible:-translate-y-1",
@@ -75,51 +76,60 @@ export function RoomCard({ room, kind, onHide, onLeave, onDelete }: RoomCardProp
         hasNews && "ring-2 ring-primary shadow-glow-primary",
       )}
     >
-      <div className="flex items-start justify-between">
-        <Avatar src={owner?.profilePic?.url} name={room.created_by} size="xs" />
-        <div className="ml-auto flex items-center gap-1">
-          {room.unreadMentions > 0 && (
-            <span
-              title={`${room.unreadMentions} mention${room.unreadMentions === 1 ? "" : "s"} of you`}
-              className="flex h-5 items-center rounded-full bg-warning px-1.5 text-[11px] font-bold text-ink-950"
-            >
-              @{room.unreadMentions > 1 ? room.unreadMentions : ""}
-            </span>
-          )}
-          {room.unreadCount > 0 && (
-            <span className="flex h-5 items-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-fg">
-              {room.unreadCount > 99 ? "99+" : room.unreadCount} new
-            </span>
+      {/* The owner's cover fills the tile above the stats strip. */}
+      <div className="relative flex flex-1 flex-col justify-between p-3">
+        <HubCoverBackdrop cover={room.cover_image} width={400} className="rounded-t-tile" />
+        <div className="relative z-10 flex items-start justify-between">
+          <Avatar src={owner?.profilePic?.url} name={room.created_by} size="xs" />
+          <div className="ml-auto flex items-center gap-1">
+            {room.unreadMentions > 0 && (
+              <span
+                title={`${room.unreadMentions} mention${room.unreadMentions === 1 ? "" : "s"} of you`}
+                className="flex h-5 items-center rounded-full bg-warning px-1.5 text-[11px] font-bold text-ink-950"
+              >
+                @{room.unreadMentions > 1 ? room.unreadMentions : ""}
+              </span>
+            )}
+            {room.unreadCount > 0 && (
+              <span className="flex h-5 items-center rounded-full bg-primary px-1.5 text-[11px] font-bold text-primary-fg">
+                {room.unreadCount > 99 ? "99+" : room.unreadCount} new
+              </span>
+            )}
+          </div>
+          <Menu
+            items={items}
+            trigger={(props) => (
+              <button
+                type="button"
+                aria-label={`${name} menu`}
+                className="-mt-1 -mr-1 flex size-7 cursor-pointer items-center justify-center rounded-lg text-fg/70 hover:bg-ink-950/50 hover:text-fg"
+                {...props}
+              >
+                <EllipsisVertical className="size-4" />
+              </button>
+            )}
+          />
+        </div>
+
+        <div className="relative flex min-w-0 flex-col items-center gap-0.5 text-center">
+          <p className="line-clamp-2 font-display text-sm font-semibold break-words text-fg capitalize">
+            {name}
+          </p>
+          {room.lastMessage?.message && (
+            <p className={cn("w-full truncate text-[11px]", hasNews ? "text-fg" : "text-fg/60")}>
+              <span className="font-semibold">@{room.lastMessage.sentBy}</span>{" "}
+              {room.lastMessage.message}
+            </p>
           )}
         </div>
-        <Menu
-          items={items}
-          trigger={(props) => (
-            <button
-              type="button"
-              aria-label={`${name} menu`}
-              className="-mt-1 -mr-1 flex size-7 cursor-pointer items-center justify-center rounded-lg text-fg/70 hover:bg-ink-950/50 hover:text-fg"
-              {...props}
-            >
-              <EllipsisVertical className="size-4" />
-            </button>
-          )}
-        />
       </div>
 
-      <div className="flex min-w-0 flex-col items-center gap-0.5 text-center">
-        <p className="line-clamp-2 font-display text-sm font-semibold break-words text-fg capitalize">
-          {name}
-        </p>
-        {room.lastMessage?.message && (
-          <p className={cn("w-full truncate text-[11px]", hasNews ? "text-fg" : "text-fg/60")}>
-            <span className="font-semibold">@{room.lastMessage.sentBy}</span>{" "}
-            {room.lastMessage.message}
-          </p>
+      <div
+        className={cn(
+          "flex items-center justify-between px-3 pb-3 text-[11px] text-fg/70",
+          room.cover_image && "rounded-b-tile border-t border-line bg-surface-raised pt-2 pb-2",
         )}
-      </div>
-
-      <div className="flex items-center justify-between text-[11px] text-fg/70">
+      >
         <span title={new Date(room.lastActiveAt).toLocaleString()}>
           {timeAgo(room.lastActiveAt)}
         </span>

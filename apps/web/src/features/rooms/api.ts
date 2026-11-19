@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { CreateRoomInput, MyRooms, Room, RoomInvite, RoomSummary } from "@chatty/shared";
+import type {
+  CreateRoomInput,
+  HubCover,
+  MyRooms,
+  Room,
+  RoomInvite,
+  RoomSummary,
+} from "@chatty/shared";
 import { api, isStatus } from "../../lib/api";
 
 export const roomKeys = {
@@ -113,6 +120,52 @@ export const useAddMember = (roomNumber: number) =>
   useRoomMutation((username: string) =>
     api.post<void>(`/rooms/${roomNumber}/members`, { username }),
   );
+
+/**
+ * Changing a hub's cover: the open hub updates straight away from the response,
+ * and lists refetch so cards pick it up.
+ */
+function useCoverMutation<TVars>(roomNumber: number, fn: (vars: TVars) => Promise<RoomSummary>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: (room) => {
+      setCachedCover(queryClient, roomNumber, room.cover_image);
+      void queryClient.invalidateQueries({
+        queryKey: roomKeys.all,
+        predicate: (q) => q.queryKey[1] !== "detail",
+      });
+    },
+  });
+}
+
+/** Puts a cover on the open hub without refetching its messages. */
+export function setCachedCover(
+  queryClient: ReturnType<typeof useQueryClient>,
+  roomNumber: number,
+  cover: HubCover | undefined,
+) {
+  queryClient.setQueryData<RoomAccess>(roomKeys.detail(roomNumber), (old) => {
+    if (!old || old.status === "missing") return old;
+    const { cover_image: _old, ...rest } = old.room;
+    return { ...old, room: { ...rest, ...(cover && { cover_image: cover }) } } as RoomAccess;
+  });
+}
+
+export const useUploadCover = (roomNumber: number) =>
+  useCoverMutation(roomNumber, (file: File) => {
+    const form = new FormData();
+    form.append("image", file);
+    return api.put<RoomSummary>(`/rooms/${roomNumber}/cover`, form);
+  });
+
+export const useMoveCover = (roomNumber: number) =>
+  useCoverMutation(roomNumber, (focus: number) =>
+    api.patch<RoomSummary>(`/rooms/${roomNumber}/cover`, { focus }),
+  );
+
+export const useRemoveCover = (roomNumber: number) =>
+  useCoverMutation(roomNumber, () => api.delete<RoomSummary>(`/rooms/${roomNumber}/cover`));
 
 /** The link people open to join a hub. */
 export const inviteUrl = (code: string) => `${window.location.origin}/invite/${code}`;

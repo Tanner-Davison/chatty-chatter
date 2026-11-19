@@ -57,8 +57,3 @@ export const leaveRoom: RequestHandler = async (req, res) => {
   await roomService.leaveRoom(currentUser(req).username, roomNumberOf(req.params));
   res.status(204).end();
 };
-
-export const deleteRoom: RequestHandler = async (req, res) => {
-  await roomService.deleteRoom(currentUser(req).username, roomNumberOf(req.params));
-  res.status(204).end();
-};

@@ -21,6 +21,8 @@ export interface AppDeps {
   linkPreviewer?: LinkPreviewer;
   /** Stores photos sent in chat; tests pass a fake. */
   chatImages?: ChatImageStore;
+  /** Stores hub cover photos; tests pass a fake. */
+  hubCovers?: ChatImageStore;
   /** Pushes notifications to people's open tabs. */
   notifier?: Notifier;
   /** Sends account emails; defaults to Resend (or the log without a key). */
@@ -36,6 +38,7 @@ export function createApp({
   presence = noPresence,
   linkPreviewer = createLinkPreviewer(),
   chatImages = unavailableImageStore,
+  hubCovers = unavailableImageStore,
   notifier = noNotifier,
   mailer = env.NODE_ENV === "test" ? { send: async () => {} } : createMailer(env),
   pusher = noPusher,
@@ -66,6 +69,7 @@ export function createApp({
       presence,
       linkPreviewer,
       chatImages,
+      hubCovers,
       notifier,
       mailer,
       pusher,
