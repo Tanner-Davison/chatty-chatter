@@ -72,6 +72,13 @@ interface MessageRecord {
         height?: number | null;
       }[]
     | null;
+  gif?: {
+    id?: string | null;
+    url?: string | null;
+    width?: number | null;
+    height?: number | null;
+    title?: string | null;
+  } | null;
   mentions?: string[] | null;
   linkPreviewHidden?: boolean | null;
 }
@@ -98,6 +105,18 @@ export function toMessage(m: MessageRecord): ChatMessage {
           : [],
       ),
     }),
+    ...(m.gif?.id &&
+      m.gif.url &&
+      m.gif.width &&
+      m.gif.height && {
+        gif: {
+          id: m.gif.id,
+          url: m.gif.url,
+          width: m.gif.width,
+          height: m.gif.height,
+          title: opt(m.gif.title),
+        },
+      }),
     ...(m.mentions?.length && { mentions: m.mentions }),
     ...(m.linkPreviewHidden && { linkPreviewHidden: true }),
   };
@@ -189,6 +208,7 @@ interface ActivityRow {
     message?: string | null;
     sentBy?: string | null;
     attachments?: unknown[] | null;
+    gif?: unknown;
   } | null;
 }
 
@@ -257,7 +277,11 @@ export async function getMyRooms(username: string): Promise<MyRooms> {
       unreadMentions: mentions.get(row.room_number) ?? 0,
       ...(row.last && {
         lastMessage: {
-          message: messagePreview(row.last.message ?? "", Boolean(row.last.attachments?.length)),
+          message: messagePreview(
+            row.last.message ?? "",
+            Boolean(row.last.attachments?.length),
+            Boolean(row.last.gif),
+          ),
           sentBy: row.last.sentBy ?? "",
         },
       }),
@@ -455,6 +479,7 @@ export async function addMessage(
     sentBy: username,
     timestamp: new Date().toISOString(),
     ...(input.attachments?.length && { attachments: input.attachments }),
+    ...(input.gif && { gif: input.gif }),
     ...(mentions.length > 0 && { mentions }),
   };
   const result = await RoomModel.updateOne(

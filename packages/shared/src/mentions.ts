@@ -44,12 +44,12 @@ export function splitMentions(text: string): { text: string; mention?: string }[
 /**
  * A one-line summary of a message for tiles, cards and notifications: code
  * blocks become "💻 Code", newlines collapse, and photo-only messages read
- * "📷 Photo".
+ * "📷 Photo" (GIF-only ones "🎞️ GIF").
  */
-export function messagePreview(text: string, hasPhotos = false): string {
+export function messagePreview(text: string, hasPhotos = false, hasGif = false): string {
   const summary = text
     .replace(/```[\s\S]*?(```|$)/g, " 💻 Code ")
     .replace(/\s+/g, " ")
     .trim();
-  return summary || (hasPhotos ? "📷 Photo" : "");
+  return summary || (hasPhotos ? "📷 Photo" : hasGif ? "🎞️ GIF" : "");
 }

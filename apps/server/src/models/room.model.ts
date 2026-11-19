@@ -15,6 +15,13 @@ const messageSchema = new Schema({
     ],
     default: undefined,
   },
+  gif: {
+    type: new Schema(
+      { id: String, url: String, width: Number, height: Number, title: String },
+      { _id: false },
+    ),
+    default: undefined,
+  },
   mentions: { type: [String], default: undefined },
   linkPreviewHidden: Boolean,
 });

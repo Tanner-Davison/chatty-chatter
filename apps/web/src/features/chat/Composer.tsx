@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Bold,
   Code,
+  ImagePlay,
   Italic,
   Paperclip,
   SendHorizontal,
@@ -21,11 +22,18 @@ import {
   Strikethrough,
   X,
 } from "lucide-react";
-import { IMAGE_TYPES, MESSAGE_MAX_LENGTH, splitMentions, type Attachment } from "@chatty/shared";
+import {
+  IMAGE_TYPES,
+  MESSAGE_MAX_LENGTH,
+  splitMentions,
+  type Attachment,
+  type Gif,
+} from "@chatty/shared";
 import { Avatar, Button, Spinner } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { acceptImages, uploadChatImage } from "../../lib/images";
 import { useUserProfile } from "../profile/api";
+import { GifPicker } from "./GifPicker";
 import { insertCodeBlock, insideOpenFence, toggleWrap, type Edit } from "./editorFormat";
 import { findMentionQuery, insertMention, rankMentions } from "./mentionAutocomplete";
 
@@ -35,7 +43,7 @@ export interface ComposerHandle {
 }
 
 interface ComposerProps {
-  onSend: (text: string, attachments: Attachment[]) => void;
+  onSend: (text: string, attachments: Attachment[], gif?: Gif) => void;
   onTyping: () => void;
   /** People who can be @mentioned in this room. */
   mentionables: string[];
@@ -64,6 +72,7 @@ export function Composer({ onSend, onTyping, mentionables, disabled, ref }: Comp
   const [text, setText] = useState("");
   const [photos, setPhotos] = useState<PendingPhoto[]>([]);
   const [photoProblem, setPhotoProblem] = useState<string>();
+  const [gifsOpen, setGifsOpen] = useState(false);
   const filePicker = useRef<HTMLInputElement>(null);
   const uploading = photos.some((p) => p.status === "uploading");
   const ready = photos.flatMap((p) => (p.status === "ready" && p.attachment ? [p.attachment] : []));
@@ -235,6 +244,14 @@ export function Composer({ onSend, onTyping, mentionables, disabled, ref }: Comp
     setPhotoProblem(undefined);
   };
 
+  // A GIF goes out on its own straight away; any draft text stays put.
+  const sendGif = ({ id, url, width, height, title }: Gif) => {
+    if (disabled) return;
+    onSend("", [], { id, url, width, height, ...(title && { title }) });
+    setGifsOpen(false);
+    area.current?.focus();
+  };
+
   const tools: {
     kind: Parameters<typeof format>[0];
     label: string;
@@ -250,6 +267,7 @@ export function Composer({ onSend, onTyping, mentionables, disabled, ref }: Comp
 
   return (
     <form ref={form} onSubmit={submit} className="relative flex items-end gap-2">
+      {gifsOpen && <GifPicker onPick={sendGif} onClose={() => setGifsOpen(false)} />}
       {open && (
         <ul
           id="mention-suggestions"
@@ -298,6 +316,21 @@ export function Composer({ onSend, onTyping, mentionables, disabled, ref }: Comp
             className="flex size-7 cursor-pointer items-center justify-center rounded-md text-fg-subtle hover:bg-ink-800 hover:text-fg [&_svg]:size-4"
           >
             <Paperclip />
+          </button>
+          <button
+            type="button"
+            aria-label="Send a GIF"
+            title="Send a GIF"
+            aria-expanded={gifsOpen}
+            // The picker closes on outside presses; don't let this one reopen it.
+            onPointerDown={(e) => gifsOpen && e.stopPropagation()}
+            onClick={() => setGifsOpen((o) => !o)}
+            className={cn(
+              "flex size-7 cursor-pointer items-center justify-center rounded-md text-fg-subtle hover:bg-ink-800 hover:text-fg [&_svg]:size-4",
+              gifsOpen && "bg-ink-800 text-fg",
+            )}
+          >
+            <ImagePlay />
           </button>
           <input
             ref={filePicker}

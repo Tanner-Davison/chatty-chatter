@@ -59,6 +59,20 @@ export interface Attachment {
   height?: number;
 }
 
+/** A GIF from GIPHY, shown at `width` x `height`. */
+export interface Gif {
+  id: string;
+  url: string;
+  width: number;
+  height: number;
+  title?: string;
+}
+
+/** A GIF picker result: the GIF to send plus a lighter thumbnail. */
+export interface GifResult extends Gif {
+  preview: string;
+}
+
 export interface ChatMessage {
   _id?: string;
   message: string;
@@ -68,6 +82,7 @@ export interface ChatMessage {
   cloudinary_id?: string;
   /** Photos sent with the message. */
   attachments?: Attachment[];
+  gif?: Gif;
   /** Usernames this message notified. */
   mentions?: string[];
   /** The sender removed the link preview for everyone. */

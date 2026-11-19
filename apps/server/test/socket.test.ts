@@ -407,6 +407,42 @@ describe("photo messages", () => {
   });
 });
 
+describe("GIF messages", () => {
+  const gif = {
+    id: "abc",
+    url: "https://media2.giphy.com/media/abc/200.webp",
+    width: 356,
+    height: 200,
+    title: "Dancing cat",
+  };
+  const sendGif = (socket: Client, room: number, payload: unknown) =>
+    new Promise<AckResponse<ChatMessage>>((resolve) =>
+      socket.emit("send_message", { room, message: "", gif: payload } as never, resolve),
+    );
+
+  it("sends a GIF on its own, and refuses ones not from GIPHY", async () => {
+    await seedRoom({ room_number: 1, created_by: "tanner" });
+    const [tanner, ben] = await Promise.all([connected("tanner"), connected("ben")]);
+    await Promise.all([join(tanner, 1), join(ben, 1)]);
+
+    const received = new Promise<{ message: ChatMessage }>((resolve) =>
+      ben.once("receive_message", resolve),
+    );
+    const ack = await sendGif(tanner, 1, gif);
+    expect(ack.ok && ack.data.gif).toEqual(gif);
+    expect((await received).message.gif).toEqual(gif);
+
+    expect((await sendGif(tanner, 1, { ...gif, url: "https://evil.example/pixel.webp" })).ok).toBe(
+      false,
+    );
+
+    const history = (await (await loginAs("ben")).get("/api/rooms/1")).body.messageHistory;
+    expect(history.at(-1).gif).toEqual(gif);
+    const discover = (await (await loginAs("ben")).get("/api/rooms/discover")).body;
+    expect(discover[0].lastMessage).toEqual({ message: "🎞️ GIF", sentBy: "tanner" });
+  });
+});
+
 describe("hub activity on the dashboard", () => {
   const mine = async (agent: Awaited<ReturnType<typeof loginAs>>, room: number) => {
     const { body } = await agent.get("/api/rooms/mine").expect(200);
