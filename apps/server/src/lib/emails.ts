@@ -19,7 +19,7 @@ function layout(
 <tr><td style="padding:32px">
 <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#e3e9f1">Chatty Chatter</p>
 <h1 style="margin:0 0 12px;font-size:20px;color:#e3e9f1">${heading}</h1>
-<p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#b7c2d1">${body}</p>
+<div style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#b7c2d1">${body}</div>
 <a href="${escape(button.href)}" style="display:inline-block;background:#4ade80;color:#052e16;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:12px">${button.label}</a>
 <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#8796aa">${footer}</p>
 <p style="margin:16px 0 0;font-size:12px;color:#5b6b80;word-break:break-all">Or paste this link into your browser:<br>${escape(button.href)}</p>
@@ -49,5 +49,46 @@ export function resetPassword(username: string, link: string) {
       "This link works for 1 hour and only once. If you didn't ask for this, ignore this email; your password won't change.",
     ),
     text: `Reset the password for @${username}:\n${link}\n\nThis link works for 1 hour and only once. If you didn't ask for this, ignore this email.`,
+  };
+}
+
+/** One email bundling everything that happened while the user was away. */
+export function alertDigest(
+  username: string,
+  alerts: { title: string; body: string; url: string }[],
+  total: number,
+  appUrl: string,
+  links: { unsubscribe: string },
+) {
+  const more = total - alerts.length;
+  const subject =
+    total === 1 ? alerts[0]!.title : `You have ${total} new notifications on Chatty Chatter`;
+  const items = alerts
+    .map(
+      (a) =>
+        `<p style="margin:0 0 12px"><a href="${escape(appUrl + a.url)}" style="color:#e3e9f1;font-weight:600;text-decoration:none">${escape(a.title)}</a>` +
+        (a.body ? `<br><span style="color:#8796aa">${escape(a.body)}</span>` : "") +
+        "</p>",
+    )
+    .join("");
+  const footer = `You're getting this because you were away. We send one email, then wait until you're back before sending another. <a href="${escape(links.unsubscribe)}" style="color:#8796aa">Turn off alert emails</a>`;
+  return {
+    subject,
+    html: layout(
+      `While you were away, @${escape(username)}`,
+      items + (more > 0 ? `<p style="margin:0">And ${more} more.</p>` : ""),
+      { label: "Open Chatty Chatter", href: `${appUrl}/notifications` },
+      footer,
+    ),
+    text: [
+      `While you were away, @${username}:`,
+      "",
+      ...alerts.map((a) => `- ${a.title}${a.body ? `: ${a.body}` : ""}\n  ${appUrl}${a.url}`),
+      ...(more > 0 ? [`- And ${more} more.`] : []),
+      "",
+      `See them all: ${appUrl}/notifications`,
+      "",
+      `We send one email, then wait until you're back before sending another. Turn off alert emails: ${links.unsubscribe}`,
+    ].join("\n"),
   };
 }

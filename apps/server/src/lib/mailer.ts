@@ -7,6 +7,7 @@ export interface Email {
   text: string;
   /** Resend drops repeats with the same key, so retries never double-send. */
   idempotencyKey?: string;
+  headers?: Record<string, string>;
 }
 
 export interface Mailer {
@@ -30,6 +31,7 @@ export function resendMailer(apiKey: string, from: string): Mailer {
           subject: email.subject,
           html: email.html,
           text: email.text,
+          ...(email.headers && { headers: email.headers }),
         }),
       });
       if (!res.ok) throw new Error(`Resend refused the email (${res.status}): ${await res.text()}`);

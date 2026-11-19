@@ -9,6 +9,7 @@ import { createGiphySearch, type GifSearch } from "./lib/gifs";
 import { createMailer, type Mailer } from "./lib/mailer";
 import { noNotifier, type Notifier } from "./lib/notifier";
 import { noPresence, type Presence } from "./lib/presence";
+import { noPusher, type Pusher } from "./lib/push";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { createApiRouter } from "./routes";
 
@@ -27,6 +28,8 @@ export interface AppDeps {
   mailer?: Mailer;
   /** Finds GIFs for the picker; defaults to GIPHY (unavailable without a key). */
   gifSearch?: GifSearch;
+  /** Sends pop-up alerts; defaults to none (tests). */
+  pusher?: Pusher;
 }
 
 /** Builds the Express app without listening, so tests can drive it with supertest. */
@@ -39,6 +42,7 @@ export function createApp({
   notifier = noNotifier,
   mailer = env.NODE_ENV === "test" ? { send: async () => {} } : createMailer(env),
   gifSearch = createGiphySearch(env),
+  pusher = noPusher,
 }: AppDeps): Express {
   const app = express();
 
@@ -69,6 +73,7 @@ export function createApp({
       notifier,
       mailer,
       gifSearch,
+      pusher,
     }),
   );
 

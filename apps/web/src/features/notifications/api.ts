@@ -4,6 +4,7 @@ import type { Notification, NotificationList } from "@chatty/shared";
 import { api } from "../../lib/api";
 import { useSocket } from "../chat/socketContext";
 import { roomKeys } from "../rooms/api";
+import { popUpIfHidden } from "./alerts";
 
 const ALL_LIMIT = 200;
 
@@ -52,6 +53,7 @@ export function useLiveNotifications() {
         unreadCount: list.unreadCount + 1,
         total: list.total + 1,
       }));
+      void popUpIfHidden(n).catch(() => {});
       // Someone added you to a hub: show it in your list straight away.
       if (n.type === "room_added") void queryClient.invalidateQueries({ queryKey: roomKeys.mine });
     };

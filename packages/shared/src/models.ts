@@ -32,6 +32,8 @@ export interface User {
   /** Only on your own account. */
   email?: string;
   emailVerified?: boolean;
+  /** Whether alert emails are on. Only on your own account. */
+  emailAlerts?: boolean;
   /** Chat colours chosen per hub, keyed by room number. Only on your own profile. */
   roomPreferences?: Record<string, RoomPreferences>;
 }

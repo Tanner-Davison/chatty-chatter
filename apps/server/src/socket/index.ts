@@ -17,6 +17,7 @@ import { HttpError } from "../lib/http-error";
 import type { Notifier } from "../lib/notifier";
 import type { Presence } from "../lib/presence";
 import { verifySocketToken } from "../lib/tokens";
+import * as alertService from "../services/alert.service";
 import * as messageService from "../services/message.service";
 import * as notificationService from "../services/notification.service";
 import * as roomService from "../services/room.service";
@@ -57,12 +58,19 @@ function registerHandlers(
   socket: ChatSocket,
   env: Env,
   chatImages: ChatImageStore,
+  notifier: Notifier,
 ): void {
   const { username } = socket.data;
   void socket.join(userChannel(username));
+  const markActive = () =>
+    void alertService
+      .markActive(username)
+      .catch((err: unknown) => console.error("Couldn't record activity", err));
+  markActive();
 
   // Closing the tab or losing connection counts as having seen the open hub.
   socket.on("disconnecting", () => {
+    markActive();
     for (const name of socket.rooms) {
       if (name.startsWith("room:"))
         void roomService
@@ -104,7 +112,7 @@ function registerHandlers(
       const { message, notifications } = await messageService.sendMessage(username, payload);
       socket.to(channel(payload.room)).emit("receive_message", { room: payload.room, message });
       for (const { recipient, ...notification } of notifications) {
-        io.to(userChannel(recipient)).emit("notification", notification);
+        notifier.send(recipient, notification);
       }
       return message;
     }),
@@ -128,7 +136,7 @@ function registerHandlers(
       void chatImages.remove(photos);
       io.to(channel(room)).emit("message_deleted", { room, messageId });
       for (const recipient of await notificationService.removeForMessage(messageId)) {
-        io.to(userChannel(recipient)).emit("notifications_changed");
+        notifier.changed(recipient);
       }
       return undefined;
     }),
@@ -148,6 +156,8 @@ export function createSocketServer(
   env: Env,
   httpServer: HttpServer,
   chatImages: ChatImageStore = unavailableImageStore,
+  /** Defaults to delivering to open tabs only. */
+  notifier?: Notifier,
 ): ChatServer {
   const io: ChatServer = new Server(httpServer, {
     cors: {
@@ -165,7 +175,8 @@ export function createSocketServer(
     next();
   });
 
-  io.on("connection", (socket) => registerHandlers(io, socket, env, chatImages));
+  const deliver = notifier ?? socketNotifier(io);
+  io.on("connection", (socket) => registerHandlers(io, socket, env, chatImages, deliver));
   return io;
 }
 
@@ -186,6 +197,7 @@ export function socketPresence(io: ChatServer): Presence {
       }
       return counts;
     },
+    isOnline: (username) => (io.sockets.adapter.rooms.get(userChannel(username))?.size ?? 0) > 0,
   };
 }
 

@@ -27,6 +27,10 @@ const envSchema = z
     GIPHY_RATING: z.enum(["g", "pg", "pg-13", "r"]).default("pg-13"),
     /** Where emailed links point. */
     APP_URL: z.url().default("https://chattychatter.com"),
+    /** Web Push keys (npx web-push generate-vapid-keys); without them, pop-ups are off. */
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().default("mailto:noreply@mail.chattychatter.com"),
   })
   .transform((env) => ({
     ...env,

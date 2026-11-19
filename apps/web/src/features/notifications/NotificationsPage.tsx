@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AtSign, CheckCheck, Trash2 } from "lucide-react";
 import { Button, ConfirmDialog, LoadingBlock, Panel } from "../../components/ui";
+import { AlertSettings } from "./AlertSettings";
 import { useAllNotifications, useDeleteNotification, useMarkRead } from "./api";
 import { NotificationItem } from "./NotificationItem";
 
@@ -45,6 +46,8 @@ export function NotificationsPage() {
           </div>
         )}
       </header>
+
+      <AlertSettings />
 
       <Panel className="p-2">
         {isPending ? (

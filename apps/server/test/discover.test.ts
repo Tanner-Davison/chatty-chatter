@@ -132,6 +132,7 @@ describe("GET /api/rooms/discover", () => {
       uploadImage: async () => uploadedPic,
       presence: {
         onlineCounts: (rooms) => new Map(rooms.filter((r) => r === 1).map((r) => [r, 2])),
+        isOnline: () => false,
       },
     });
     const agent = request.agent(app);

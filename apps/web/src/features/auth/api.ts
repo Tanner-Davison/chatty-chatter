@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { LoginInput, SignupInput, User } from "@chatty/shared";
 import { api, isStatus } from "../../lib/api";
+import { turnOffPopups } from "../notifications/alerts";
 
 export const meQueryKey = ["auth", "me"] as const;
 
@@ -46,7 +47,11 @@ export function useSignup() {
 export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => api.post<void>("/auth/logout"),
+    mutationFn: async () => {
+      // While still logged in, so the server forgets this device too.
+      await turnOffPopups().catch(() => {});
+      await api.post<void>("/auth/logout");
+    },
     onSettled: () => {
       queryClient.clear();
       queryClient.setQueryData(meQueryKey, null);
