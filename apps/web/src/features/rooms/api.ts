@@ -65,11 +65,6 @@ export function useRoom(roomNumber: number) {
   });
 }
 
-export async function isRoomNumberAvailable(roomNumber: number): Promise<boolean> {
-  const { available } = await api.get<{ available: boolean }>(`/rooms/${roomNumber}/availability`);
-  return available;
-}
-
 function useRoomMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
   const queryClient = useQueryClient();
   return useMutation({

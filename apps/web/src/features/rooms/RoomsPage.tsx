@@ -45,7 +45,7 @@ export function RoomsPage() {
           <Button
             size="lg"
             icon={<Plus className="size-5" />}
-            onClick={() => void navigate("/createroom/0")}
+            onClick={() => void navigate("/createroom")}
           >
             New hub
           </Button>

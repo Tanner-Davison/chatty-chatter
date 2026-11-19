@@ -300,14 +300,24 @@ export async function markSeen(username: string, roomNumber: number): Promise<vo
   await UserModel.updateOne({ username }, { $set: { [`lastSeen.${roomNumber}`]: new Date() } });
 }
 
+/** A random unused 7-digit number. Numbers are internal ids (in links); people never pick them. */
+async function pickRoomNumber(): Promise<number> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const candidate = 1_000_000 + Math.floor(Math.random() * 9_000_000);
+    if (await isRoomNumberAvailable(candidate)) return candidate;
+  }
+  throw conflict("Couldn't set up the hub. Try again.");
+}
+
 export async function createRoom(username: string, input: CreateRoomInput): Promise<RoomSummary> {
-  if (!(await isRoomNumberAvailable(input.roomNumber))) {
+  if (input.roomNumber !== undefined && !(await isRoomNumberAvailable(input.roomNumber))) {
     throw conflict("That room number is taken");
   }
+  const roomNumber = input.roomNumber ?? (await pickRoomNumber());
   const now = new Date();
   const date = now.toLocaleDateString("en-US");
   const room = await RoomModel.create({
-    room_number: input.roomNumber,
+    room_number: roomNumber,
     room_name: input.name,
     private_room: input.isPrivate,
     ...(input.isPrivate &&
@@ -332,7 +342,7 @@ export async function createRoom(username: string, input: CreateRoomInput): Prom
       $push: {
         roomsCreated: {
           roomName: input.name,
-          room: input.roomNumber,
+          room: roomNumber,
           private: input.isPrivate,
           timestamp: now.toISOString(),
         },

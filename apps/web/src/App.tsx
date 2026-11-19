@@ -54,6 +54,8 @@ const routes: RouteObject[] = [
           { path: "/notifications", element: <NotificationsPage /> },
           { path: "/chatroom/:room", element: <ChatPage /> },
           { path: "/profile/:username", element: <ProfilePage /> },
+          { path: "/createroom", element: <CreateRoomPage /> },
+          // Old links carried a hub number; it is ignored now.
           { path: "/createroom/:room", element: <CreateRoomPage /> },
           { path: "/invite/:code", element: <InvitePage /> },
         ],

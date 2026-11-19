@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import {
-  ArrowLeft,
-  BellMinus,
-  BellPlus,
-  Crown,
-  ImagePlus,
-  Lock,
-  Plus,
-  UserPlus,
-} from "lucide-react";
+import { ArrowLeft, BellMinus, BellPlus, Crown, ImagePlus, Lock, UserPlus } from "lucide-react";
 import type { Room } from "@chatty/shared";
 import { Badge, Button, ConfirmDialog, LoadingBlock, Panel, StatusDot } from "../../components/ui";
 import { cn } from "../../lib/cn";
@@ -70,7 +61,7 @@ export function ChatPage() {
 
   if (!Number.isSafeInteger(roomNumber) || roomNumber <= 0) {
     return (
-      <Missing title="That isn't a hub number" onBack={() => void navigate("/currentservers")} />
+      <Missing title="That hub link isn't right" onBack={() => void navigate("/currentservers")} />
     );
   }
   if (isPending) return <LoadingBlock label="Opening hub" />;
@@ -79,11 +70,7 @@ export function ChatPage() {
   if (data.status === "locked") return <PrivateRoomGate room={data.room} />;
   if (data.status === "missing") {
     return (
-      <Missing
-        title={`Hub #${roomNumber} doesn't exist yet`}
-        onBack={() => void navigate("/currentservers")}
-        onCreate={() => void navigate(`/createroom/${roomNumber}`)}
-      />
+      <Missing title="This hub doesn't exist" onBack={() => void navigate("/currentservers")} />
     );
   }
   // Keyed so switching hubs starts with fresh chat state.
@@ -204,59 +191,61 @@ function ChatRoom({ room, onReconnect }: { room: Room; onReconnect: () => void }
           each its own layer, so the header's popovers need the header itself on top. */}
       <Panel
         className={cn(
-          "relative z-20 flex flex-wrap items-center gap-3 px-4 py-3",
-          room.cover_image && "min-h-28 items-end sm:min-h-36",
+          "relative z-20 flex flex-col gap-3 p-4",
+          room.cover_image && "min-h-44 justify-between sm:min-h-56",
         )}
       >
         {/* Behind the header's content, inside the panel's own layer. */}
         <HubCoverBackdrop cover={room.cover_image} width={1600} className="-z-10 rounded-2xl" />
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<ArrowLeft className="size-4" />}
-          onClick={() => void navigate("/currentservers")}
-        >
-          <span className="hidden sm:inline">Chat-Hubs</span>
-        </Button>
-        <div
-          className={cn(
-            "min-w-0",
-            room.cover_image ? cn(COVER_TEXT_SCRIM, "mr-auto px-3 py-1.5") : "flex-1",
-          )}
-        >
-          <h1 className="truncate font-display text-xl font-semibold capitalize">
-            {room.room_name ?? `Hub #${room.room_number}`}
-          </h1>
-          <p
+        {/* The hub's name leads, top left; actions sit along the bottom. */}
+        <div className="flex items-start gap-3">
+          <div
             className={cn(
-              "flex flex-wrap items-center gap-2 text-xs",
-              room.cover_image ? "text-fg/75" : "text-fg-subtle",
+              "mr-auto flex min-w-0 flex-col gap-1.5",
+              room.cover_image && cn(COVER_TEXT_SCRIM, "px-3 py-2"),
             )}
           >
-            #{room.room_number}
-            {room.private_room ? (
-              <Badge tone="private">
-                <Lock /> {room.invite_only ? "Invite only" : "Private"}
-              </Badge>
-            ) : (
-              <Badge tone="public">Public</Badge>
-            )}
-            {room.room_category && <Badge>{room.room_category}</Badge>}
-          </p>
+            <h1 className="truncate font-display text-2xl font-bold tracking-tight capitalize sm:text-4xl">
+              {room.room_name?.trim() || "Untitled hub"}
+            </h1>
+            <p className="flex flex-wrap items-center gap-2 text-xs">
+              {room.private_room ? (
+                <Badge tone="private">
+                  <Lock /> {room.invite_only ? "Invite only" : "Private"}
+                </Badge>
+              ) : (
+                <Badge tone="public">Public</Badge>
+              )}
+              {room.room_category && <Badge>{room.room_category}</Badge>}
+            </p>
+          </div>
+          <ChatSettings room={room} isOwner={room.created_by === user.username} />
         </div>
-        <StatusDot online={connected && !joinError} label={joinError ?? undefined} />
-        {room.private_room && (
+        <div className="flex flex-wrap items-center gap-2">
           <Button
+            variant="ghost"
             size="sm"
-            variant="private"
-            icon={<UserPlus className="size-4" />}
-            onClick={() => setInviting(true)}
+            icon={<ArrowLeft className="size-4" />}
+            onClick={() => void navigate("/currentservers")}
+            className={cn(room.cover_image && "bg-ink-950/60 backdrop-blur-sm")}
           >
-            <span className="hidden sm:inline">Invite</span>
+            <span className="hidden sm:inline">Chat-Hubs</span>
           </Button>
-        )}
-        <SubscribeButton room={room} />
-        <ChatSettings room={room} isOwner={room.created_by === user.username} />
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <StatusDot online={connected && !joinError} label={joinError ?? undefined} />
+            {room.private_room && (
+              <Button
+                size="sm"
+                variant="private"
+                icon={<UserPlus className="size-4" />}
+                onClick={() => setInviting(true)}
+              >
+                <span className="hidden sm:inline">Invite</span>
+              </Button>
+            )}
+            <SubscribeButton room={room} />
+          </div>
+        </div>
       </Panel>
 
       <Panel className="relative min-h-0 flex-1">
@@ -393,31 +382,14 @@ function SubscribeButton({ room }: { room: Room }) {
   );
 }
 
-function Missing({
-  title,
-  onBack,
-  onCreate,
-}: {
-  title: string;
-  onBack: () => void;
-  onCreate?: () => void;
-}) {
+function Missing({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <Panel className="mx-auto mt-10 flex max-w-md flex-col items-center gap-4 p-8 text-center">
       <h1 className="font-display text-2xl font-semibold">{title}</h1>
-      {onCreate && (
-        <p className="text-sm text-fg-muted">The number is free. Create the hub and it's yours.</p>
-      )}
-      <div className="flex gap-3">
-        <Button onClick={onBack} icon={<ArrowLeft className="size-4" />}>
-          Back
-        </Button>
-        {onCreate && (
-          <Button variant="primary" onClick={onCreate} icon={<Plus className="size-4" />}>
-            Create it
-          </Button>
-        )}
-      </div>
+      <p className="text-sm text-fg-muted">It may have been deleted by its owner.</p>
+      <Button onClick={onBack} icon={<ArrowLeft className="size-4" />}>
+        Back
+      </Button>
     </Panel>
   );
 }

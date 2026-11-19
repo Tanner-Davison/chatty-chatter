@@ -14,7 +14,7 @@ interface HubCardProps {
 
 /** An explore card: what the hub is, who's in it and how alive it is. */
 export function HubCard({ room, onOpen, className }: HubCardProps) {
-  const name = room.room_name?.trim() || `Hub #${room.room_number}`;
+  const name = room.room_name?.trim() || "Untitled hub";
   const tone = room.private_room ? "private" : "public";
   // Text over an owner's photo gets its own dark pane; gradients are dark enough already.
   const hasCover = Boolean(room.cover_image);
@@ -59,9 +59,7 @@ export function HubCard({ room, onOpen, className }: HubCardProps) {
             <h3 className="truncate font-display font-semibold capitalize group-hover:text-fg">
               {name}
             </h3>
-            <p className="truncate text-xs text-fg/70">
-              {room.room_category ?? "General"} · #{room.room_number}
-            </p>
+            <p className="truncate text-xs text-fg/70">{room.room_category ?? "General"}</p>
           </div>
           <div
             className={cn(

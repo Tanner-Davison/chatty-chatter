@@ -63,6 +63,18 @@ describe("POST /api/rooms", () => {
     expect(res.body).toMatchObject({ private_room: true, invite_only: true });
   });
 
+  it("picks a free hub number when none is given", async () => {
+    const res = await tanner
+      .post("/api/rooms")
+      .send({ name: "Named only", category: "General", isPrivate: false })
+      .expect(201);
+    expect(res.body.room_number).toBeGreaterThanOrEqual(1_000_000);
+    expect(res.body.room_number).toBeLessThan(10_000_000);
+
+    const user = await UserModel.findOne({ username: "tanner" });
+    expect(user?.roomsCreated.map((r) => r.room)).toEqual([res.body.room_number]);
+  });
+
   it("rejects a taken room number with 409", async () => {
     await seedRoom({ room_number: 42, created_by: "ben" });
     await tanner
