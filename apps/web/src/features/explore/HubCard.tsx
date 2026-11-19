@@ -3,7 +3,7 @@ import type { DiscoverRoom } from "@chatty/shared";
 import { AvatarStack, Badge } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { timeAgo } from "../../lib/format";
-import { HubCoverBackdrop } from "../rooms/HubCoverBackdrop";
+import { COVER_TEXT_SCRIM, HubCoverBackdrop } from "../rooms/HubCoverBackdrop";
 import { CategoryIcon } from "./CategoryIcon";
 
 interface HubCardProps {
@@ -16,6 +16,8 @@ interface HubCardProps {
 export function HubCard({ room, onOpen, className }: HubCardProps) {
   const name = room.room_name?.trim() || `Hub #${room.room_number}`;
   const tone = room.private_room ? "private" : "public";
+  // Text over an owner's photo gets its own dark pane; gradients are dark enough already.
+  const hasCover = Boolean(room.cover_image);
 
   return (
     <button
@@ -48,11 +50,12 @@ export function HubCard({ room, onOpen, className }: HubCardProps) {
               tone === "public"
                 ? "bg-public-soft text-public ring-public/30"
                 : "bg-private-soft text-private ring-private/30",
+              hasCover && "bg-ink-950/70 backdrop-blur-sm",
             )}
           >
             <CategoryIcon category={room.room_category} />
           </span>
-          <div className="min-w-0 flex-1">
+          <div className={cn("min-w-0", hasCover ? cn(COVER_TEXT_SCRIM, "mr-auto") : "flex-1")}>
             <h3 className="truncate font-display font-semibold capitalize group-hover:text-fg">
               {name}
             </h3>
@@ -60,7 +63,12 @@ export function HubCard({ room, onOpen, className }: HubCardProps) {
               {room.room_category ?? "General"} · #{room.room_number}
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+          <div
+            className={cn(
+              "flex shrink-0 flex-col items-end gap-1",
+              hasCover && cn(COVER_TEXT_SCRIM, "p-1 empty:hidden"),
+            )}
+          >
             {room.onlineCount > 0 && (
               <Badge tone="public">
                 <span className="size-1.5 animate-pulse rounded-full bg-public" />
@@ -76,7 +84,12 @@ export function HubCard({ room, onOpen, className }: HubCardProps) {
           </div>
         </div>
 
-        <p className="relative line-clamp-2 min-h-10 text-sm text-fg/85">
+        <p
+          className={cn(
+            "relative line-clamp-2 text-sm text-fg/85",
+            hasCover ? cn(COVER_TEXT_SCRIM, "w-fit max-w-full") : "min-h-10",
+          )}
+        >
           {room.private_room ? (
             <span className="flex items-center gap-1.5 text-fg/70">
               <Lock className="size-3.5" /> Private hub. Password required.
@@ -92,7 +105,12 @@ export function HubCard({ room, onOpen, className }: HubCardProps) {
         </p>
 
         {room.friendsHere && room.friendsHere.length > 0 && (
-          <p className="relative truncate text-xs text-primary">
+          <p
+            className={cn(
+              "relative truncate text-xs text-primary",
+              hasCover && cn(COVER_TEXT_SCRIM, "w-fit max-w-full"),
+            )}
+          >
             {room.friendsHere
               .slice(0, 2)
               .map((f) => `@${f}`)
